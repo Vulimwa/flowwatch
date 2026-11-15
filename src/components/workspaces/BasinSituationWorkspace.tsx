@@ -54,7 +54,6 @@ interface BasinSituationWorkspaceProps {
   exposureScreening: ExposureScreeningResult | null;
   damResult: DamScenarioResult | null;
   layersState: Record<string, LayerRuntimeState>;
-  serviceStats: { total: number; checked: number; available: number; errored: number };
   onActivateLayer: (datasetId: string, band?: number) => void;
   onToggleLayer: (datasetId: string, visible: boolean) => void;
   onNavigateWorkspace: (id: AppModuleId) => void;
@@ -134,7 +133,6 @@ export function BasinSituationWorkspace({
   exposureScreening,
   damResult,
   layersState,
-  serviceStats,
   onActivateLayer,
   onToggleLayer,
   onNavigateWorkspace,
@@ -244,17 +242,6 @@ export function BasinSituationWorkspace({
         </span>
 
         <div className="flex flex-col gap-2 text-xs">
-          <div className="flex flex-wrap gap-1.5">
-            <CalciteChip scale="s" kind="brand" appearance="outline-fill" icon="check-circle">
-              Verified Services: {serviceStats.available}/{serviceStats.total}
-            </CalciteChip>
-            {geoglowsIndex && (
-              <CalciteChip scale="s" kind="neutral" appearance="outline-fill">
-                {geoglowsIndex.stats.geoglowsReachCount} TDX-Hydro Reaches
-              </CalciteChip>
-            )}
-          </div>
-
           <CalciteLabel scale="s" className="mb-0">
             Sub-Basin Analytical Focus
             <CalciteSelect

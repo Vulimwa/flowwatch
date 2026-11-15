@@ -39,7 +39,6 @@ import {
   CalciteActionGroup,
   CalciteButton,
   CalciteCard,
-  CalciteChip,
   CalciteDropdown,
   CalciteDropdownGroup,
   CalciteDropdownItem,
@@ -1302,12 +1301,6 @@ export function BasinMapView({
     (s) => s.visible && s.status === 'loading'
   ).length;
 
-  const activeLayerLabels = DATA_REGISTRY.filter((d) => layersState[d.id]?.visible).map((d) => {
-    const st = layersState[d.id];
-    const bandLabel = d.bands?.[st.band]?.label;
-    return bandLabel ? `${d.shortTitle} (${bandLabel})` : d.shortTitle;
-  });
-
   const activeExagOption =
     TERRAIN_EXAGGERATION_OPTIONS.find((o) => o.value === terrainExaggeration) ||
     TERRAIN_EXAGGERATION_OPTIONS[2];
@@ -1350,7 +1343,7 @@ export function BasinMapView({
         </CalciteSegmentedControl>
 
         <div
-          className="flex items-center gap-1.5 px-2 rounded border shadow-sm"
+          className="flowwatch-map-layer-toggle flex items-center gap-1.5 px-2 rounded border shadow-sm"
           style={{
             backgroundColor: 'var(--calcite-color-foreground-1)',
             borderColor: 'var(--calcite-color-border-2)',
@@ -1361,19 +1354,12 @@ export function BasinMapView({
           <CalciteSwitch
             scale="s"
             checked={mapLayersEnabled}
-            label="Load map layers"
+            label="Map layers"
             onCalciteSwitchChange={(e) => {
               onMapLayersEnabledChange(Boolean((e.target as HTMLCalciteSwitchElement).checked));
             }}
           />
-          <button
-            type="button"
-            className="text-xs font-medium bg-transparent border-0 p-0 cursor-pointer"
-            style={{ color: 'var(--calcite-color-text-1)' }}
-            onClick={() => onMapLayersEnabledChange(!mapLayersEnabled)}
-          >
-            {mapLayersEnabled ? 'Layers On' : 'Compute Only'}
-          </button>
+          <span className="text-sm">Map layers</span>
         </div>
 
         <CalciteButton
@@ -1484,17 +1470,6 @@ export function BasinMapView({
           Search
         </CalciteButton>
 
-        {selectedLinkno !== null && (
-          <CalciteChip
-            scale="s"
-            kind="brand"
-            appearance="solid"
-            icon="layer-stream"
-            label={`Active GEOGLOWS LINKNO ${selectedLinkno}`}
-          >
-            LINKNO {selectedLinkno}
-          </CalciteChip>
-        )}
       </div>
 
       {searchOpen && (
@@ -1511,6 +1486,7 @@ export function BasinMapView({
           className="flowwatch-map-actionbar"
           floating
           expandToggleDisabled
+          overflowMode="none"
           layout="vertical"
           scale="m"
         >
@@ -1518,19 +1494,19 @@ export function BasinMapView({
             <CalciteAction
               icon="plus"
               text="Zoom in"
-              scale="s"
+              scale="m"
               onClick={() => handleZoomStep(1)}
             />
             <CalciteAction
               icon="minus"
               text="Zoom out"
-              scale="s"
+              scale="m"
               onClick={() => handleZoomStep(-1)}
             />
             <CalciteAction
               icon="home"
               text={viewMode === '3d' ? 'Reset 3D basin camera' : 'Reset basin extent'}
-              scale="s"
+              scale="m"
               onClick={onResetHome}
             />
           </CalciteActionGroup>
@@ -1556,15 +1532,9 @@ export function BasinMapView({
       </div>
 
       {loadingRasterCount > 0 && (
-        <div className="absolute bottom-11 left-3 z-10">
-          <CalciteChip scale="s" kind="brand" appearance="solid" label="Rendering GeoTIFF layers">
-            <span className="inline-flex items-center gap-2">
-              <CalciteLoader inline scale="s" label="Loading GeoTIFF layer" />
-              <span>
-                Draping {loadingRasterCount} GeoTIFF layer{loadingRasterCount > 1 ? 's' : ''}...
-              </span>
-            </span>
-          </CalciteChip>
+        <div className="flowwatch-map-loading absolute bottom-11 left-3 z-10" role="status">
+          <CalciteLoader inline scale="s" label="Updating map layers" />
+          <span>Updating map layers</span>
         </div>
       )}
 
@@ -1578,46 +1548,32 @@ export function BasinMapView({
       )}
 
       {/* Bottom-Right Live Coordinate, Terrain3D Elevation & Camera Telemetry */}
-      <div className="hidden sm:block absolute bottom-3 right-3 z-10 max-w-xl">
-        <CalciteCard scale="s">
-          <div
-            className="flex items-center gap-2 text-xs tabular-nums flex-wrap"
-            style={{
-              fontFamily: 'var(--calcite-code-family)',
-              color: 'var(--calcite-color-text-2)',
-            }}
-          >
-            <span>
-              {pointerCoords
-                ? `${pointerCoords.lat.toFixed(4)}°, ${pointerCoords.lon.toFixed(4)}°`
-                : 'Click terrain to inspect'}
-            </span>
+      <div className="flowwatch-map-status absolute bottom-3 right-3 z-10 max-w-xl" aria-label="Map pointer status">
+        {(pointerCoords || viewMode === '3d') && (
+          <div className="flex items-center gap-2 text-xs tabular-nums">
+            {pointerCoords && (
+              <span>
+                {pointerCoords.lat.toFixed(4)}°, {pointerCoords.lon.toFixed(4)}°
+              </span>
+            )}
             {viewMode === '3d' && pointerCoords?.elevM != null && (
               <>
-                <span aria-hidden="true">·</span>
-                <span style={{ color: 'var(--calcite-color-text-1)' }}>
-                  Elev {Math.round(pointerCoords.elevM).toLocaleString()} m
-                </span>
+                {pointerCoords && <span aria-hidden="true">·</span>}
+                <span>Elev {Math.round(pointerCoords.elevM).toLocaleString()} m</span>
               </>
             )}
             {viewMode === '3d' && (
               <>
-                <span aria-hidden="true">·</span>
+                {(pointerCoords?.elevM != null || pointerCoords) && (
+                  <span aria-hidden="true">·</span>
+                )}
                 <span>
                   Tilt {cameraTelemetry.tilt}° / Hdg {cameraTelemetry.heading}°
                 </span>
               </>
             )}
-            <span aria-hidden="true">·</span>
-            <span className="max-w-[210px] truncate">
-              {!mapLayersEnabled
-                ? 'Layers unloaded (Compute-only)'
-                : activeLayerLabels.length > 0
-                ? activeLayerLabels.join(', ')
-                : 'No thematic layers'}
-            </span>
           </div>
-        </CalciteCard>
+        )}
       </div>
 
       {mapError && (

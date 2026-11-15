@@ -9,7 +9,6 @@ import {
   CalciteShellPanel,
 } from '@esri/calcite-components-react';
 
-import { DATA_REGISTRY } from '../../config/dataRegistry';
 import { useFlowWatchState } from '../../hooks/useFlowWatchState';
 import type { AppModuleId, SupportingToolId } from '../../types/geospatial';
 import { DataQualityModule } from '../dashboards/DataQualityModule';
@@ -105,13 +104,12 @@ export function AppShell() {
 
   const leftPanelDescription =
     leftTab === 'layers'
-      ? `${DATA_REGISTRY.length} ArcGIS datasets · Toggle & inspect layers`
+      ? 'Toggle and inspect map layers'
       : leftTab === 'registry'
       ? 'Native spatial resolution, format & status across all datasets'
       : leftTab === 'indicators'
       ? 'Formulas, validity rules & scientific caveats'
       : 'Upper Tana Basin Hydrological Intelligence';
-  const serviceStatusLabel = `${state.serviceStats.available}/${state.serviceStats.total} ArcGIS services available`;
 
   const renderActiveWorkspace = () => {
     switch (state.activeModule) {
@@ -133,7 +131,6 @@ export function AppShell() {
             exposureScreening={state.exposureScreening}
             damResult={state.damResult}
             layersState={state.layersState}
-            serviceStats={state.serviceStats}
             onActivateLayer={state.activateExclusiveModuleLayer}
             onToggleLayer={state.setLayerVisible}
             onNavigateWorkspace={handleSelectWorkspace}
@@ -250,6 +247,7 @@ export function AppShell() {
           className="flowwatch-actionbar"
           slot="action-bar"
           expandToggleDisabled
+          overflowMode="none"
           layout="vertical"
           scale="m"
         >
@@ -313,7 +311,7 @@ export function AppShell() {
 
         <CalcitePanel
           heading={leftPanelHeading}
-          description={`${leftPanelDescription} · ${serviceStatusLabel}`}
+          description={leftPanelDescription}
           closable
           onCalcitePanelClose={() => state.setLeftPanelOpen(false)}
         >
@@ -402,6 +400,7 @@ export function AppShell() {
           className="flowwatch-actionbar"
           slot="action-bar"
           expandToggleDisabled
+          overflowMode="none"
           layout="vertical"
           scale="m"
         >
