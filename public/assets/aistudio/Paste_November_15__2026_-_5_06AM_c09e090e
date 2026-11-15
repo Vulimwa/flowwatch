@@ -1,0 +1,1227 @@
+# MASTER APPLICATION TRANSFORMATION PROMPT
+## FLOWWATCH AFRICA: From Geospatial Data Inventory to River Intelligence and Decision Support
+
+You are working on an existing React + TypeScript + Vite application called **FlowWatch Africa**.
+
+Your task is to fundamentally improve its analytical architecture, navigation, workflows, data integration and outputs.
+
+This is NOT a request to build another dashboard, add more visualisations, or simply rename existing navigation items.
+
+The existing application has a substantial collection of geospatial datasets, an ArcGIS Maps SDK for JavaScript map, and a Calcite-based interface. However, its current structure behaves too much like a geospatial data inventory. Users can explore individual datasets, but the application does not yet consistently translate the evidence into integrated river-flow assessments, catchment assessments, potential impact assessments and water-management decision support.
+
+We need to correct this.
+
+---
+
+# 1. THE ACTUAL CHALLENGE
+
+The application is being developed for the GIS Day 2026 Africa Flash Challenge:
+
+**Rivers of Life: El Niño Year, Exploring Streamflow Data and the Potential for Floods and Droughts.**
+
+FlowWatch Africa must investigate the relationship between:
+
+1. Climate variability and rainfall conditions.
+2. Catchment wetness, drying and hydrological response.
+3. River streamflow behaviour and forecasts.
+4. Potential flood and drought implications.
+5. Exposure of people, settlements, infrastructure and water resources.
+6. Water-management and reservoir-operation decisions.
+
+The central question the application must answer is:
+
+"During an El Niño-influenced climate season, what is happening across the Tana River Basin, how are river flows responding, where could unusual conditions matter, and what decisions or preparedness actions should be investigated?"
+
+The application should be an evidence-based river intelligence and decision-support system.
+
+It should not claim to predict every flood, produce validated inundation maps without an appropriate model, or issue operational dam instructions.
+
+---
+
+# 2. NON-NEGOTIABLE DEVELOPMENT INSTRUCTIONS
+
+Before changing code, inspect the entire existing project.
+
+Understand:
+
+- Existing application structure.
+- Existing navigation and routes.
+- Existing ArcGIS Maps SDK implementation.
+- Existing Calcite components and design patterns.
+- Existing data registry and service configuration.
+- Existing map layers and their source URLs.
+- Existing charts and analytical calculations.
+- Existing GEOGLOWS integration, if any.
+- Existing dam simulation logic.
+- Existing loading, error and data validation mechanisms.
+
+Do not discard working functionality.
+
+Do not rebuild the application from scratch.
+
+Do not replace the existing ArcGIS Maps SDK with another mapping library.
+
+Do not introduce a second design system.
+
+## Calcite is mandatory
+
+The entire application interface must continue to use the ArcGIS Calcite Design System.
+
+Use Calcite components for navigation, buttons, tabs, panels, dropdowns, inputs, date selection, alerts, loaders, tables, tooltips, dialogs and other supported interface elements.
+
+Use ArcGIS Maps SDK for JavaScript for the map, operational layers, feature identification, rendering, popups, legends, layer management and spatial interactions.
+
+Do not introduce Material UI, Ant Design, Bootstrap, shadcn, Chakra or another component framework.
+
+Do not replace Calcite with generic HTML controls where an appropriate Calcite component exists.
+
+Preserve the application's existing visual identity, but improve its information architecture and analytical usability.
+
+---
+
+# 3. REBUILD THE NAVIGATION AROUND ANALYTICAL QUESTIONS
+
+The current navigation includes categories such as Climate, Soil & PET, Rivers, Terrain, Water, Exposure, Dam Sim and Data Quality.
+
+These categories make the application appear to be a dataset inventory.
+
+Replace the primary navigation with five connected analytical workspaces.
+
+## WORKSPACE 01: BASIN SITUATION
+
+Purpose:
+
+Provide an integrated assessment of current conditions across the Tana River Basin.
+
+This must become the main landing page, not a collection of layer shortcuts.
+
+It should answer:
+
+- What are the current rainfall conditions?
+- Are rainfall conditions above or below the historical baseline?
+- Are catchments showing unusually wet or dry conditions?
+- What are the current river-flow conditions according to GEOGLOWS?
+- Which river reaches warrant further investigation?
+- Are there potentially exposed settlements and infrastructure?
+- What has changed compared with the historical reference period?
+
+Required content:
+
+A. Basin-wide situation summary.
+
+B. Current rainfall anomaly summary.
+
+C. Catchment wetness and soil-moisture assessment.
+
+D. GEOGLOWS streamflow situation, using verified reach data.
+
+E. Potential high-flow and low-flow areas.
+
+F. Exposure context.
+
+G. Data freshness and confidence indicators.
+
+H. An evidence-based situation narrative.
+
+The summary must be generated from actual retrieved data and analytical results.
+
+Do not create fabricated narrative text or hardcoded status labels.
+
+If an indicator cannot be calculated, explicitly report that the indicator is unavailable.
+
+The user must be able to select a date or valid analysis period and see the data supporting the situation assessment.
+
+## WORKSPACE 02: STREAMFLOW INTELLIGENCE
+
+Purpose:
+
+Make GEOGLOWS the central analytical component of FlowWatch Africa.
+
+This workspace must investigate actual river-flow behaviour rather than simply display a river network.
+
+It should answer:
+
+- What is the current forecast discharge at a selected river reach?
+- What does the historical simulated discharge show?
+- How unusual is the forecast relative to historical conditions?
+- Is the forecast approaching or exceeding a relevant return-period threshold?
+- How much uncertainty exists in the forecast?
+- Which reaches show potentially significant high-flow or low-flow signals?
+
+### Required GEOGLOWS integration
+
+Inspect the existing GEOGLOWS implementation and complete it.
+
+Official resources:
+
+- https://geoglows.ecmwf.int/
+- https://geoglows.ecmwf.int/api/
+- https://geoglows.ecmwf.int/documentation
+- https://training.geoglows.org/rfs/tutorials/data-service/
+- https://geoglows.readthedocs.io/en/latest/api-documentation/data.html
+- https://github.com/geoglows/geoglows-rest-api
+
+Esri Living Atlas MapServer:
+
+https://livefeeds3.arcgis.com/arcgis/rest/services/GEOGLOWS/GlobalWaterModel_Medium/MapServer
+
+Inspect service metadata, available layers, fields, spatial reference and temporal capabilities before implementation.
+
+Use the Living Atlas service for spatial streamflow context where appropriate.
+
+Use the GEOGLOWS API for selected-reach historical and forecast time-series analysis.
+
+Do not assume that loading the Living Atlas map layer means forecast API integration is complete.
+
+### River reach identification
+
+Discover the actual TDX-Hydro river network and its GEOGLOWS LINKNO identifiers.
+
+Inspect the existing Tana River streams FeatureServer:
+
+https://services8.arcgis.com/oTalEaSXAuyNT7xf/arcgis/rest/services/tanariverstreams/FeatureServer
+
+Determine whether its attributes contain verified GEOGLOWS identifiers.
+
+Do not assume local stream IDs correspond to GEOGLOWS LINKNO.
+
+Where necessary, create a defensible spatial matching workflow using:
+
+- Common coordinate reference systems.
+- River-line geometry.
+- Spatial intersection and nearest-line distance.
+- River topology and direction where available.
+- Reach attributes and upstream drainage area where available.
+- Ambiguity rejection.
+- Match confidence and verification status.
+
+Preserve the source identifier and matching provenance.
+
+The application must not silently assign a GEOGLOWS LINKNO to an unrelated river segment.
+
+### Selected-reach analytical interface
+
+When the user selects a verified reach, display:
+
+1. River name or identifier.
+2. GEOGLOWS LINKNO.
+3. Reach location on the map.
+4. Historical simulated discharge.
+5. Current forecast discharge.
+6. Forecast hydrograph.
+7. Ensemble uncertainty.
+8. Historical comparison.
+9. Return-period thresholds.
+10. Interpretation of the current flow signal.
+
+Use appropriate units, preferably m³/s where verified.
+
+Forecast charts must use actual timestamps returned by the service.
+
+Display uncertainty using the actual available ensemble statistics.
+
+Where using the documented statistics product, identify the min, 25th percentile, mean, median, 75th percentile and max statistics and their ensemble-member basis. Do not mix the 51-member statistics product with the separate higher-resolution member.
+
+Historical GEOGLOWS retrospective data must be described as modelled historical streamflow, not direct observed gauge measurements.
+
+### High-flow and low-flow interpretation
+
+Calculate comparisons only when the required historical and forecast data are available.
+
+Potential analytical measures include:
+
+- Forecast discharge relative to historical median.
+- Forecast percentile relative to the historical distribution.
+- Forecast relative to relevant return-period thresholds.
+- Forecast duration above or below thresholds.
+- Differences between current and historical seasonal behaviour.
+
+Clearly define the statistical period and method.
+
+A return-period threshold is not a guarantee of a flood event.
+
+Do not call a reach flooded merely because its forecast exceeds a historical threshold.
+
+Use language such as:
+
+- Elevated forecast flow.
+- Potential high-flow concern.
+- Below-normal modelled flow.
+- Potential low-flow concern.
+- Forecast uncertainty remains substantial.
+
+Every interpretation must be traceable to the actual data and calculations.
+
+---
+
+## WORKSPACE 03: CATCHMENT RESPONSE
+
+Purpose:
+
+Explain how rainfall and catchment conditions relate to the river-flow signals.
+
+This is where climate and physical catchment information becomes an analytical workflow rather than a collection of independent layers.
+
+It should answer:
+
+- Where has rainfall been unusually high or low?
+- Which catchments show increasing or decreasing soil moisture?
+- Is rainfall accumulation consistent with the observed soil-moisture signal?
+- Are PET conditions relevant to potential water stress?
+- What physical catchment characteristics could influence runoff and drainage?
+- Do the available indicators tell a consistent hydrological story?
+
+### Required analyses
+
+A. Rainfall anomaly analysis.
+
+Compare the selected period against the available 2001–2025 baseline.
+
+Use CHIRPS seasonal, monthly and annual datasets appropriately.
+
+Calculate anomalies using compatible periods and units.
+
+Do not compare a partial current month against a complete historical month without explicitly accounting for the difference.
+
+B. Soil-moisture analysis.
+
+Use ERA5 soil moisture recent 2026, baseline 2001–2025 and anomaly products.
+
+Show:
+
+- Current soil-moisture conditions.
+- Historical baseline.
+- Anomaly.
+- Spatial distribution.
+- Temporal context where available.
+
+C. PET and water-stress context.
+
+Use ERA5 PET 2026.
+
+Interpret PET as atmospheric evaporative demand, not actual water consumption or a direct measurement of drought.
+
+Do not calculate a drought index from PET alone.
+
+D. Terrain and drainage characteristics.
+
+Use DEM, slope, flow direction and flow accumulation to explain catchment characteristics.
+
+Do not describe terrain layers as direct flood predictions.
+
+E. Catchment comparison.
+
+Allow the user to compare relevant sub-basins or catchment units.
+
+Where the data support it, summarize rainfall, soil moisture and PET statistics over the actual catchment geometry.
+
+Do not assume a basin-wide raster average is an adequate representation of every sub-basin.
+
+### Signal consistency
+
+Create an explicit analytical section that compares:
+
+- Rainfall anomaly.
+- Soil-moisture anomaly.
+- PET context.
+- GEOGLOWS streamflow response.
+
+Identify whether signals are:
+
+- Consistent.
+- Partially consistent.
+- Contradictory.
+- Insufficient for interpretation.
+
+Explain why.
+
+Do not force all indicators into one artificial score.
+
+Do not equate rainfall anomaly with streamflow anomaly.
+
+Do not assume rainfall over a single pixel explains a river reach's discharge.
+
+---
+
+## WORKSPACE 04: IMPACT AND EXPOSURE
+
+Purpose:
+
+Investigate where unusual river-flow conditions could have consequences for people, settlements, infrastructure and water resources.
+
+This is a potential impact screening workspace.
+
+It must answer:
+
+- Which settlements are near reaches with elevated flow signals?
+- Which built-up areas may warrant closer investigation?
+- What population may be present within a clearly defined screening area?
+- What does terrain and HAND indicate about relative drainage proximity?
+- Which water resources or infrastructure assets are relevant?
+- Where should field verification or further hydrological modelling be prioritised?
+
+### Required datasets
+
+Use:
+
+- Population 2025.
+- Built-up areas 2020.
+- Land cover.
+- HAND.
+- DEM.
+- Slope.
+- Surface-water occurrence.
+- Surface-water seasonality.
+- Surface-water transition.
+- River network.
+- Verified infrastructure datasets where available.
+
+### Required analytical methods
+
+A. River proximity analysis.
+
+Allow the user to examine settlements and built-up areas within configurable distances of selected river reaches.
+
+Clearly label these as proximity screening distances, not flood boundaries.
+
+B. Population exposure screening.
+
+Where population raster data and spatial geometries are compatible, estimate population within the defined screening areas.
+
+Document:
+
+- Population raster resolution.
+- Population year.
+- Resampling method, if any.
+- Area-weighting method.
+- NoData treatment.
+- Whether the result is an estimate.
+
+Do not sum raster cells incorrectly or double-count overlapping areas.
+
+C. HAND interpretation.
+
+Use height above nearest drainage as a relative terrain indicator.
+
+Do not classify HAND thresholds as validated flood depths or inundation boundaries without calibration and a suitable hydraulic or hydrological model.
+
+D. Land-cover interpretation.
+
+Use land cover to contextualise catchment and potential impact conditions.
+
+Do not claim that land cover alone establishes flood risk.
+
+E. Surface-water change.
+
+Use occurrence, seasonality and transition products to investigate historical surface-water behaviour.
+
+Clearly distinguish historical water occurrence from current flood observations.
+
+### Impact assessment output
+
+For a selected river reach or group of reaches, produce a structured assessment containing:
+
+- Selected river reach.
+- Forecast flow signal.
+- Relevant return-period comparison.
+- Nearby settlements.
+- Built-up area screening.
+- Population screening estimate where supported.
+- HAND and terrain context.
+- Relevant surface-water context.
+- Data limitations.
+- Recommended areas for further investigation.
+
+The output must distinguish observed, modelled, derived and estimated information.
+
+Do not generate fake flood polygons or claim precise numbers of affected people without a defensible method.
+
+---
+
+## WORKSPACE 05: WATER OPERATIONS LAB
+
+Purpose:
+
+Explore the implications of different hypothetical water-management and reservoir-operation decisions.
+
+This workspace retains the Dam Operator's Dilemma but must be scientifically defensible.
+
+It should answer:
+
+- How might different release decisions affect downstream flow under specified assumptions?
+- What trade-offs exist between water storage, downstream discharge and potential water availability?
+- What additional information would an actual operator require?
+- How do uncertainty and upstream conditions influence the scenario?
+
+### Required features
+
+Allow a user to configure hypothetical scenarios such as:
+
+- Lower release.
+- Baseline release.
+- Higher release.
+- Different starting reservoir storage.
+- Different inflow assumptions.
+- Different scenario durations.
+
+Display:
+
+- Scenario assumptions.
+- Reservoir storage trajectory, if the required parameters are supplied.
+- Release trajectory.
+- Simulated downstream response.
+- Differences between scenarios.
+- Sensitivity to uncertain inputs.
+
+### Scientific constraints
+
+Do not equate GEOGLOWS discharge at an arbitrary river reach with dam inflow.
+
+Do not assume a discharge value at Garissa is the same as a Masinga release.
+
+Account for intermediate reservoirs, tributaries, routing and travel time if a real cascade model is developed.
+
+Identify which dams are hydropower, water-supply, micro-hydro or proposed assets.
+
+Do not connect unrelated dam assets into a single operational cascade.
+
+If actual reservoir storage, inflow, release or operating data are unavailable, make the scenario explicitly hypothetical and require the user to provide or configure the missing assumptions.
+
+Do not present hypothetical scenario outputs as observed conditions or operational forecasts.
+
+---
+
+# 4. USE THE EXISTING DATA PROPERLY
+
+The application already has a substantial hosted geospatial inventory.
+
+Your job is to turn these resources into a coherent analytical system.
+
+Do not duplicate datasets unnecessarily.
+
+Do not create replacement layers when the existing hosted items are usable.
+
+Do not treat every item as a map layer that should automatically be switched on.
+
+Each dataset must have a defined analytical role.
+
+## Existing hosted items
+
+ArcGIS Online organisation:
+
+https://africageoportal.maps.arcgis.com
+
+All item IDs below refer to hosted items in the user's organisation.
+
+Resolve each item through its ArcGIS REST item metadata and determine the actual service URL, layer type, fields, spatial reference, extent, raster properties and capabilities.
+
+Do not assume an item `/data` endpoint is itself an ImageServer URL.
+
+### Analytical raster inventory
+
+| Dataset | Item ID | Intended analytical role |
+|---|---|---|
+| tana_surface_water_seasonality | 1a07d48e59044dc7b7e19d9ac9a75683 | Historical water seasonality |
+| tana_surface_water_occurrence | 1a4acb0eaad34c3ba6ed0804eae7be15 | Historical water occurrence |
+| tana_surface_water_extent_transition | bda6b3ef88814b00aefc6551f5ddb683 | Historical water extent change |
+| tana_streams_upa100km2 | 7cbd8bc60371462ebcb7dd789bf28c7c | Stream network context and drainage |
+| tana_slope | 4004c9ec8ec14b13bbcee3a19c2694c5 | Terrain characteristics |
+| tana_population_2025 | 8eb142a239f34993a72180478bb6c9f3 | Population exposure screening |
+| tana_landcover | 85dee424a76a43ca96d1657f8f4e28bf | Land-cover context |
+| tana_hnd | 69c37b1d239f49b9aa6daf3126b36fe9 | Height-above-nearest-drainage screening |
+| tana_flow_direction | fb0ecdfb0a314c24bce2fb39ed91a63b | Drainage direction |
+| tana_flow_accumulation | c853b62a787c45e9a4431594d27ccfbb | Drainage accumulation |
+| tana_era5_soilmoisture_recent_2026 | aae7a128735f477fbb97552f7e6598b9 | Recent soil-moisture conditions |
+| tana_era5_temperature_2026 | 3a82b3ab720d4b00a0db20b4c2fdc0f6 | Temperature context |
+| tana_era5_soilmoisture_baseline_2001_2025 | 17c6ec596303422eb2bf62b9aa89f73f | Soil-moisture historical reference |
+| tana_era5_soilmoisture_anomaly_2026 | 32caa1f895204faba25499c3be8530be | Soil-moisture anomaly |
+| tana_era5_pet_2026 | ba9a885ac8d34fb4b026dd898bafd2d8 | Potential evapotranspiration |
+| tana_dem | 7d997cccb0754d1bad502d99b6a03698 | Elevation and terrain analysis |
+| tana_chirps_seasonal_clim_2001_2025 | 0cafb49664b64d8281fa7f4dda734e97 | Seasonal rainfall baseline |
+| tana_chirps_seasonal_2026 | 483fa00e14574b69b296909a5ff1023f | Current seasonal rainfall |
+| tana_chirps_monthly_clim_2001_2025 | eac5ea7f479b409d80f69dda9b608609 | Monthly rainfall baseline |
+| tana_chirps_monthly_2026 | 92899763f4b3421f82de9af25db450c9 | Current monthly rainfall |
+| tana_chirps_anomaly_2026 | 8c53d070230d44b5a5368359d8e0aba4 | Rainfall anomaly |
+| tana_chirps_annual_stats_2001_2025 | a49bfc31cb414668813c591f51446c05 | Historical annual statistics |
+| tana_chirps_annual_2001_2025 | 152261bad9614e16adbca0d1b960842d | Historical annual rainfall |
+| tana_builtup_2020 | 728dfadc55264d899e84dfc42255a5ab | Built-up area exposure |
+
+### Visualization GeoTIFF inventory
+
+These are visualization-oriented versions of selected datasets. They must be treated as rendering products, not automatically as analytical inputs.
+
+| Dataset | Item ID |
+|---|---|
+| tana_surface_water_seasonality_viz | debdb910423041db9c6ff3a853587e5c |
+| tana_surface_water_occurrence_viz | bc9b3917e3c549ce92f8ebb3c3b25e48 |
+| tana_slope_viz | f883b88c8294441cb9fb959f17b3a593 |
+| tana_population_2025_viz | 0f508b9451894588afe38a6386a1b1d7 |
+| tana_landcover_viz | 94bb1541e84347cfac5045faa37a7ff7 |
+| tana_hnd_viz | 43b6722fd9f243619854a98c02e30143 |
+| tana_flow_accumulation_viz | 82c255ae87ce41c49db8c0a3520a0fe5 |
+| tana_era5_soilmoisture_anomaly_2026_viz | 25879b39ddd842739847ff83c94b8379 |
+| tana_chirps_anomaly_2026_viz | 3cd94d6219954363aabd16b1d8d6ad46 |
+| tana_chirps_annual_stats_2001_2025_viz | a7b54589e42749c98e5db3f185ac5d7b |
+| tana_builtup_2020_viz | 906a779108a243beab18138e019b415e |
+| tana_dem_viz | 9eddacc2af42446b8a9821fafee00250 |
+
+Existing river network FeatureServer:
+
+https://services8.arcgis.com/oTalEaSXAuyNT7xf/arcgis/rest/services/tanariverstreams/FeatureServer
+
+### Important raster rules
+
+For every raster, inspect:
+
+- Pixel size and native resolution.
+- Coordinate reference system.
+- Extent.
+- NoData value.
+- Band count.
+- Band descriptions.
+- Units.
+- Temporal reference.
+- Whether values are raw, derived, classified or RGB rendered.
+
+Do not calculate statistical summaries from RGB-rendered visualization rasters.
+
+Use analytical rasters for numerical calculations.
+
+Use visualization rasters for display where appropriate.
+
+Preserve the original raster resolution when performing analysis unless a clearly justified resampling method is required.
+
+Do not combine datasets with different temporal periods as though they represent the same date.
+
+Do not combine incompatible units.
+
+Use appropriate zonal statistics, raster alignment, masks and area-weighting methods.
+
+Every derived output must record its input datasets, processing method, temporal reference and limitations.
+
+---
+
+# 5. PRESERVE THE ORIGINAL TANA BASIN AREA OF INTEREST
+
+The study area was created in Google Earth Engine from multiple sub-basins:
+
+```javascript
+var basins = ee.FeatureCollection('projects/rcmrd-energy/assets/trb-sub-basins');
+var aoi = basins.filter(ee.Filter.inList('fid', [7, 5, 3, 6, 8])).geometry();
+```
+
+Preserve all five selected sub-basin components.
+
+Do not replace this multipolygon with a bounding box.
+
+Do not silently use only the first polygon.
+
+Do not assume all datasets cover the exact same extent.
+
+Where catchment-level statistics are calculated, use the appropriate actual sub-basin geometries and confirm their spatial compatibility with the data.
+
+---
+
+# 6. BUILD AN ANALYTICAL DATA ENGINE
+
+This is one of the most important requirements.
+
+The application must have a central analytical data and indicator architecture.
+
+Do not put calculations directly inside individual UI components.
+
+Separate:
+
+1. Data access.
+2. Data validation.
+3. Spatial processing.
+4. Temporal processing.
+5. Hydrological indicators.
+6. Interpretation logic.
+7. Visualization.
+8. User interface.
+
+Create reusable services or modules.
+
+Suggested structure:
+
+```text
+src/
+  app/
+    navigation/
+    routing/
+    layout/
+
+  data/
+    registry/
+    arcgis/
+    geoglows/
+    metadata/
+    validation/
+
+  analytics/
+    rainfall/
+    soil-moisture/
+    catchment/
+    streamflow/
+    return-periods/
+    exposure/
+    impact-screening/
+    reservoir-scenarios/
+
+  workflows/
+    basin-situation/
+    streamflow-intelligence/
+    catchment-response/
+    impact-assessment/
+    water-operations/
+
+  components/
+    maps/
+    charts/
+    calcite/
+    indicators/
+    tables/
+
+  state/
+  utils/
+  types/
+```
+
+Adapt this structure to the existing project rather than blindly creating duplicate folders.
+
+### Dataset registry
+
+Create or improve a central registry that defines for each dataset:
+
+- Dataset ID.
+- Human-readable name.
+- Source.
+- ArcGIS item ID.
+- Actual service URL.
+- Service type.
+- Layer ID, where applicable.
+- Spatial reference.
+- Extent.
+- Native resolution.
+- Units.
+- Temporal coverage.
+- Data date.
+- Baseline period.
+- Analytical role.
+- Visualization role.
+- NoData information.
+- Availability status.
+- Last successful validation.
+
+The registry should drive the application.
+
+Do not hardcode the same item IDs and URLs in multiple components.
+
+### Indicator registry
+
+Create an indicator registry that describes:
+
+- Indicator name.
+- Scientific definition.
+- Formula or method.
+- Input datasets.
+- Units.
+- Temporal aggregation.
+- Spatial aggregation.
+- Validity requirements.
+- Confidence or quality status.
+- Interpretation rules.
+- Limitations.
+
+The UI should show the user how an indicator was derived.
+
+### Data provenance
+
+Every analytical chart, metric, map and situation summary should have an accessible explanation of:
+
+- Data source.
+- Reference period.
+- Date of data.
+- Calculation method.
+- Units.
+- Spatial resolution.
+- Missing-data treatment.
+- Important limitations.
+
+Do not display unexplained numbers.
+
+---
+
+# 7. CREATE FOUR MAIN ANALYTICAL OUTPUTS
+
+The entire application must revolve around these four deliverables.
+
+## OUTPUT A: RIVER-FLOW SITUATION ASSESSMENT
+
+For each selected verified GEOGLOWS reach:
+
+- Current forecast.
+- Historical simulated streamflow comparison.
+- Relevant return-period thresholds.
+- Ensemble uncertainty.
+- High-flow or low-flow signal.
+- Forecast period.
+- Interpretation.
+- Data quality and limitations.
+
+Output format:
+
+A structured river-flow assessment containing a hydrograph, map location, comparison metrics, uncertainty and a concise evidence-based explanation.
+
+The user should be able to select a reach, date range and analysis mode.
+
+## OUTPUT B: CATCHMENT WETNESS AND RAINFALL ASSESSMENT
+
+For each selected sub-basin:
+
+- Current rainfall compared with the 2001–2025 baseline.
+- Rainfall anomaly.
+- Soil-moisture anomaly.
+- PET context.
+- Relevant terrain and drainage characteristics.
+- Temporal and spatial consistency between indicators.
+
+Output format:
+
+A catchment assessment with maps, time-series charts, comparison statistics and an explanation of whether the indicators show consistent or contradictory signals.
+
+Do not create a combined wetness or drought score unless its methodology is scientifically justified and documented.
+
+## OUTPUT C: POTENTIAL IMPACT ASSESSMENT
+
+Where river conditions warrant further investigation:
+
+- Nearby settlements.
+- Built-up areas.
+- Population screening estimates.
+- HAND and terrain context.
+- Water resources.
+- Infrastructure.
+- Relevant historical surface-water patterns.
+
+Output format:
+
+A spatial screening report identifying locations that warrant further investigation, including the evidence, assumptions and limitations.
+
+Clearly distinguish proximity, potential exposure and actual inundation.
+
+## OUTPUT D: WATER-MANAGEMENT DECISION EXERCISE
+
+For the Dam Operator's Dilemma:
+
+- Different hypothetical release decisions.
+- Starting storage assumptions.
+- Inflow assumptions.
+- Simulated release trajectories.
+- Potential downstream response.
+- Water storage versus release trade-offs.
+- Sensitivity to uncertainty.
+- Information required for actual operations.
+
+Output format:
+
+An interactive scenario comparison with transparent assumptions and a clear statement that it is an exploratory exercise unless validated operational data and an appropriate model are available.
+
+---
+
+# 8. INTEGRATE THE FOUR OUTPUTS INTO ONE SITUATION ASSESSMENT
+
+The most important feature is the ability to connect the four analytical outputs.
+
+A user should be able to investigate a sub-basin, examine its rainfall and wetness conditions, select a relevant river reach, inspect the GEOGLOWS forecast, and then examine potentially exposed settlements and infrastructure.
+
+The application should not make the user independently navigate several disconnected modules to construct the story.
+
+Create an integrated assessment workflow:
+
+STEP 1: Select the basin or sub-basin.
+
+STEP 2: Examine rainfall and catchment conditions.
+
+STEP 3: Identify relevant GEOGLOWS river reaches.
+
+STEP 4: Examine historical and forecast streamflow.
+
+STEP 5: Identify high-flow or low-flow signals that warrant investigation.
+
+STEP 6: Examine nearby settlements, infrastructure and terrain.
+
+STEP 7: Review uncertainty and data limitations.
+
+STEP 8: Generate an evidence-based situation assessment.
+
+### Situation assessment report
+
+The user should be able to generate a report containing:
+
+1. Assessment title.
+2. Selected basin or sub-basin.
+3. Assessment date and data freshness.
+4. Rainfall conditions.
+5. Catchment wetness and PET conditions.
+6. Selected river-flow conditions.
+7. Forecast versus historical comparison.
+8. Return-period interpretation.
+9. Potentially exposed areas.
+10. Water-management considerations.
+11. Uncertainty and limitations.
+12. Data sources and methodology.
+
+Provide an export option where practical.
+
+The report must be generated from actual application state and verified analytical outputs.
+
+Do not create a static report with fabricated values.
+
+---
+
+# 9. MAPS, VISUALISATIONS AND CHARTS MUST SUPPORT THE ANALYSIS
+
+We are not removing maps or visualisations.
+
+We are giving them a purpose.
+
+Every map and chart should answer a specific analytical question.
+
+Examples:
+
+### Rainfall
+- Current rainfall distribution.
+- Historical rainfall baseline.
+- Current versus historical comparison.
+- Seasonal and monthly anomaly maps.
+- Sub-basin rainfall comparison.
+
+### Catchment response
+- Soil-moisture anomaly.
+- Soil-moisture historical comparison.
+- PET distribution.
+- Drainage and terrain context.
+
+### Streamflow
+- GEOGLOWS river network.
+- Selected reach.
+- Historical discharge hydrograph.
+- Forecast hydrograph.
+- Ensemble uncertainty interval.
+- Return-period threshold comparison.
+
+### Potential impact
+- Selected reach and proximity screening areas.
+- Nearby built-up areas.
+- Population screening.
+- HAND and terrain context.
+- Surface-water historical patterns.
+
+### Water operations
+- Storage trajectories.
+- Release trajectories.
+- Scenario comparisons.
+- Downstream response under stated assumptions.
+
+Do not create charts merely because a dataset exists.
+
+Do not display meaningless decorative KPIs.
+
+Do not invent values to fill empty cards.
+
+Every chart must identify its units, temporal period, source and relevant method.
+
+---
+
+# 10. MAP INTERACTION AND SPATIAL WORKFLOW
+
+Keep ArcGIS Maps SDK as the primary mapping engine.
+
+The map must support analytical interaction.
+
+Required capabilities:
+
+- Select basin or sub-basin.
+- Select river reach.
+- Identify river reach and its verified GEOGLOWS LINKNO.
+- Open selected-reach analytical details.
+- Highlight selected catchments.
+- Show relevant exposure features.
+- Toggle contextual layers.
+- Display legends.
+- Inspect layer metadata.
+- Zoom to selected analytical areas.
+- Maintain spatial context while navigating workflows.
+
+Layer controls should be contextual.
+
+Do not overwhelm users with a giant inventory of every available layer.
+
+Show only the layers relevant to the current workflow by default, with an advanced layer explorer available when required.
+
+The map must remain a shared analytical workspace across the application.
+
+---
+
+# 11. DATA QUALITY, UNCERTAINTY AND SCIENTIFIC INTEGRITY
+
+Do not hide uncertainty.
+
+The application must clearly distinguish:
+
+- Observed data.
+- Modelled data.
+- Forecast data.
+- Historical simulations.
+- Derived indicators.
+- Spatial screening estimates.
+- Hypothetical scenario outputs.
+
+Important scientific constraints:
+
+1. CHIRPS rainfall is not river discharge.
+2. ERA5 soil moisture is not a direct measurement of floodwater.
+3. PET is not actual water consumption.
+4. GEOGLOWS retrospective flow is modelled historical streamflow, not necessarily observed gauge data.
+5. GEOGLOWS discharge at a river reach is not automatically reservoir inflow.
+6. A river proximity buffer is not a flood boundary.
+7. HAND is not a validated flood-inundation model.
+8. Historical surface-water occurrence does not establish a current flood.
+9. Population within a screening area does not mean every person is affected.
+10. El Niño does not guarantee flooding or drought in every Tana sub-basin.
+
+Where data are missing, display the limitation.
+
+Where a calculation is not defensible, do not perform it.
+
+Where an API fails, do not silently display fabricated or stale results as current.
+
+---
+
+# 12. EL NIÑO CONTEXT
+
+The application should investigate the climate context without making unsupported causal claims.
+
+If an authoritative ENSO indicator or historical climate classification is available, display its source and reference period.
+
+Distinguish:
+
+- Global ENSO status.
+- Regional rainfall anomaly.
+- Catchment response.
+- River-flow response.
+
+Do not assume that all unusual Tana River conditions are caused by El Niño.
+
+Do not label 2026 as an El Niño year without checking the authoritative ENSO classification for the relevant dates.
+
+If the available data cannot support a specific El Niño attribution, describe the application as examining climate variability and its hydrological implications.
+
+---
+
+# 13. USER EXPERIENCE AND DESIGN
+
+The application should feel like a professional river intelligence and decision-support platform.
+
+Retain:
+
+- Existing application branding.
+- ArcGIS Maps SDK.
+- Calcite Design System.
+- Existing map functionality.
+- Existing useful datasets.
+- Existing working integrations.
+
+Improve:
+
+- Navigation clarity.
+- Analytical workflow.
+- Information hierarchy.
+- Map and chart relationships.
+- Data provenance.
+- Indicator interpretation.
+- Situation assessment outputs.
+- Loading, empty and error states.
+
+The main navigation must be:
+
+1. Basin Situation
+2. Streamflow Intelligence
+3. Catchment Response
+4. Impact & Exposure
+5. Water Operations Lab
+
+Data quality, metadata, layer controls and technical diagnostics should be accessible as supporting tools rather than competing primary navigation categories.
+
+Do not make every workspace look like the same dashboard template.
+
+Each workspace should have a layout suited to its analytical purpose.
+
+---
+
+# 14. PERFORMANCE AND TECHNICAL REQUIREMENTS
+
+- Reuse existing services.
+- Avoid loading all datasets at application startup.
+- Load analytical data on demand.
+- Cache validated API responses appropriately.
+- Cancel obsolete requests when the selected reach or date changes.
+- Handle API rate limits and timeouts.
+- Validate all returned values.
+- Handle nulls and missing periods.
+- Avoid duplicate requests.
+- Keep map rendering responsive.
+- Avoid blocking the interface during calculations.
+- Keep all secrets and private credentials out of client-side code.
+- Use a suitable server-side proxy only where necessary for CORS, security or service constraints.
+- Do not introduce unnecessary dependencies.
+
+If a requested service is inaccessible, report that fact and continue implementing the parts that can be verified.
+
+---
+
+# 15. IMPLEMENTATION ORDER
+
+Do not attempt to build all five workspaces simultaneously without a working analytical foundation.
+
+Implement in the following sequence.
+
+### PHASE 1: AUDIT AND ARCHITECTURE
+
+- Inspect the existing application.
+- Inventory all current functionality.
+- Resolve the actual hosted ArcGIS service URLs.
+- Validate raster and feature service metadata.
+- Inspect the current GEOGLOWS implementation.
+- Establish the dataset registry.
+- Establish the indicator registry.
+- Identify missing data and calculations.
+- Preserve working functionality.
+
+### PHASE 2: STREAMFLOW INTELLIGENCE
+
+Prioritise GEOGLOWS.
+
+- Validate the river network.
+- Discover actual LINKNO identifiers.
+- Establish verified Tana reach matching.
+- Connect forecast API.
+- Connect historical retrospective API.
+- Connect ensemble statistics.
+- Connect return-period information.
+- Build a working selected-reach hydrograph.
+- Display uncertainty and data provenance.
+
+Do not proceed as though this is complete until a real reach has been selected and real API responses have been displayed.
+
+### PHASE 3: CATCHMENT RESPONSE
+
+- Implement rainfall comparisons.
+- Implement soil-moisture comparisons.
+- Implement PET context.
+- Implement sub-basin statistics.
+- Implement signal consistency assessment.
+- Connect catchment selection to relevant river reaches.
+
+### PHASE 4: IMPACT AND EXPOSURE
+
+- Implement proximity screening.
+- Implement population screening using defensible raster methods.
+- Connect HAND and terrain context.
+- Integrate built-up and land-cover data.
+- Create evidence-based impact assessment outputs.
+
+### PHASE 5: WATER OPERATIONS LAB
+
+- Audit the existing dam simulator.
+- Separate verified inputs from hypothetical inputs.
+- Make assumptions configurable and visible.
+- Build transparent scenario comparisons.
+- Avoid unsupported reservoir claims.
+
+### PHASE 6: BASIN SITUATION AND REPORTING
+
+- Integrate all four analytical outputs.
+- Create basin-wide situation summaries.
+- Generate evidence-backed narratives.
+- Add report export.
+- Validate all linked workflows.
+
+### PHASE 7: FINAL QUALITY ASSURANCE
+
+Test every analytical workflow.
+
+Confirm that:
+
+- Every indicator uses the correct data.
+- Every calculation has a documented method.
+- Every map and chart displays the correct period and units.
+- GEOGLOWS requests return real data.
+- LINKNO matching is verified.
+- Missing data are clearly identified.
+- No fabricated metrics are displayed.
+- No unverified feature is labelled complete.
+- Calcite is used consistently.
+- Existing working functionality is preserved.
+
+---
+
+# 16. DEFINITION OF DONE
+
+FlowWatch Africa is not complete merely because the application builds successfully.
+
+It is complete when a judge can open it and ask:
+
+"We are experiencing an El Niño-influenced season. What is happening in the Tana River Basin, which rivers are showing unusual flow conditions, and where should we pay attention?"
+
+The application must be able to:
+
+1. Show rainfall conditions against a clearly defined historical baseline.
+2. Investigate catchment wetness and drying signals.
+3. Select a verified GEOGLOWS river reach.
+4. Retrieve real historical and forecast discharge.
+5. Compare forecast flows with relevant historical and return-period statistics.
+6. Explain ensemble uncertainty.
+7. Connect river-flow signals to relevant catchment conditions.
+8. Identify potentially exposed settlements and infrastructure.
+9. Explain the limitations of exposure screening.
+10. Explore a defensible hypothetical water-management scenario.
+11. Produce a coherent, evidence-based basin situation assessment.
+12. Show the sources, dates, calculations and limitations supporting every important conclusion.
+
+The final result must be an analytical application, not a layer catalogue.
+
+---
+
+# 17. HOW YOU MUST WORK
+
+Work directly in the existing project.
+
+Do not respond with a proposal describing what you intend to build.
+
+Inspect the code, implement the changes, run the application, test the workflows and fix errors.
+
+Do not replace real calculations with static sample numbers.
+
+Do not use mock data to make unfinished features appear operational.
+
+If an integration cannot be completed because an external service is unavailable, explain exactly what is blocked and what remains functional.
+
+After implementation, provide a concise technical completion report containing:
+
+1. Existing functionality preserved.
+2. Navigation and architecture changed.
+3. Actual datasets and services connected.
+4. Analytical indicators implemented.
+5. GEOGLOWS endpoints and operations verified.
+6. Actual river reaches successfully matched.
+7. Real charts and calculations tested.
+8. Features still incomplete.
+9. Data or services still required.
+10. Known scientific and technical limitations.
+
+**The priority is analytical substance, not the number of screens, layers, charts or features.**
+
+Build FlowWatch Africa to investigate river conditions and support evidence-based decisions across the Tana River Basin.

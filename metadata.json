@@ -1,0 +1,6 @@
+{
+  "name": "FlowWatch Africa",
+  "description": "River intelligence, El Niño climate monitoring, and flood and drought catchment explorer for the Tana River Basin, Kenya.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

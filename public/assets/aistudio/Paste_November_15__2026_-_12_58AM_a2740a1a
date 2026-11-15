@@ -1,0 +1,1151 @@
+# FLOWWATCH AFRICA
+## Master Application Build Specification
+
+You are a senior geospatial application architect, frontend engineer and GIS product designer specialising in Esri ArcGIS Maps SDK for JavaScript, Calcite Design System, React and spatial intelligence applications.
+
+Your task is to BUILD a complete, functional web application called **FlowWatch Africa**.
+
+This is not a landing-page design exercise, a static prototype, a dashboard mockup or a generic map viewer. Build a working geospatial intelligence application using the real public ArcGIS datasets and services supplied below.
+
+Do not stop at planning, architecture diagrams, recommendations or code snippets. Implement the application.
+
+---
+
+# 1. PRODUCT IDENTITY
+
+**Name:** FlowWatch Africa
+
+**Descriptor:** River Intelligence | El Niño | Flood and Drought Monitoring
+
+**Geographic focus:** Tana River Basin, Kenya.
+
+**Core proposition:**
+
+FlowWatch Africa brings together rainfall variability, soil moisture, terrain, surface water, river networks and streamflow intelligence to help users investigate catchment conditions and explore potential flood and drought risks.
+
+The application should communicate the relationship:
+
+El Niño and rainfall variability → catchment conditions → river response → water availability → flood and drought implications.
+
+The application must distinguish observed or modelled environmental information from forecasts, simulations and hypothetical scenarios.
+
+Do not claim that rainfall anomalies alone establish a flood event. Do not describe terrain-derived flow accumulation as measured river discharge.
+
+---
+
+# 2. NON-NEGOTIABLE TECHNOLOGY STACK
+
+Use:
+
+- React
+- TypeScript
+- Vite
+- ArcGIS Maps SDK for JavaScript
+- Calcite Design System
+- ArcGIS REST API for service and item discovery
+- Lucide icons only where a suitable Calcite component or icon is unavailable.
+
+## ABSOLUTE CALCITE REQUIREMENT
+
+Calcite Design System MUST power the entire application interface.
+
+This requirement is mandatory and must not be weakened during implementation.
+
+Use official Calcite web components throughout the application, including appropriate components such as:
+
+- calcite-shell
+- calcite-shell-panel
+- calcite-navigation
+- calcite-navigation-logo
+- calcite-panel
+- calcite-action-bar
+- calcite-action
+- calcite-button
+- calcite-icon
+- calcite-label
+- calcite-select
+- calcite-option
+- calcite-switch
+- calcite-checkbox
+- calcite-slider
+- calcite-input
+- calcite-segmented-control
+- calcite-segmented-control-item
+- calcite-tabs
+- calcite-tab
+- calcite-tab-title
+- calcite-tab-nav
+- calcite-list
+- calcite-list-item
+- calcite-block
+- calcite-card
+- calcite-chip
+- calcite-tooltip
+- calcite-loader
+- calcite-alert
+- calcite-modal
+- calcite-dropdown
+- calcite-dropdown-group
+- calcite-dropdown-item
+- calcite-scrim
+- calcite-meter
+- calcite-progress
+- calcite-notice
+- calcite-table
+- calcite-pagination
+
+These are examples, not a requirement to use every component.
+
+Use the correct components for their intended interactions. Check the current official Calcite documentation and installed package versions before implementing component names, slots, properties or events.
+
+### Calcite enforcement rules
+
+1. Import and configure Calcite properly.
+2. Use official Calcite React-compatible web components.
+3. Use Calcite CSS variables and design tokens.
+4. Use Calcite's typography system.
+5. Use Calcite components for buttons, dropdowns, switches, tooltips, panels, tabs, selectors and other interface controls.
+6. Do not replace Calcite with Material UI, Ant Design, Bootstrap, shadcn/ui, Chakra UI or custom generic HTML controls.
+7. Do not build a generic Tailwind dashboard and merely add a few Calcite components afterwards.
+8. Do not create custom buttons when a Calcite button exists.
+9. Do not implement a second independent design system.
+10. Custom CSS is permitted for layout, map positioning and application-specific composition, but not to recreate existing Calcite components.
+11. Use proper Calcite light/dark theme support where appropriate.
+12. Avoid oversized gradients, decorative glassmorphism, excessive rounded cards and unnecessary visual effects.
+
+If a Calcite component does not exist for a specific interaction, use an appropriate accessible HTML element and explain the exception.
+
+Before generating the UI, establish the Calcite foundation and verify that it is actually rendering. Do not silently abandon Calcite during implementation.
+
+---
+
+# 3. VISUAL DESIGN DIRECTION
+
+Design a professional geospatial intelligence platform.
+
+The application should feel like a serious operational river monitoring and decision-support system.
+
+Visual references:
+- Esri ArcGIS applications
+- ArcGIS Experience Builder
+- ArcGIS Dashboards
+- Modern environmental intelligence platforms
+- Professional geospatial operations centres
+
+### Colour system
+
+Use a restrained environmental palette:
+
+- Deep navy: primary structural colour
+- River blue: hydrological information and water layers
+- Teal: environmental indicators
+- Amber: watch and caution conditions
+- Red: high-risk or critical conditions
+- Neutral grey: supporting information and interface backgrounds
+- White or light neutral surfaces for the primary workspace
+
+Suggested tokens:
+
+- Primary: #16324F
+- Secondary: #176B87
+- Water: #2C91C7
+- Teal: #2A9D8F
+- Warning: #E9A23B
+- Critical: #C94C4C
+- Background: #F4F7F9
+- Surface: #FFFFFF
+- Text: #202B36
+
+These are initial design references. Use Calcite tokens where appropriate and maintain sufficient contrast.
+
+### Typography
+
+Use Calcite's typography system and a clean, professional sans-serif typeface.
+
+Avoid decorative fonts, excessive font weights and unnecessarily large dashboard headings.
+
+### Layout
+
+Build a desktop-first operational interface that also adapts to tablets and mobile devices.
+
+The map should be the main workspace.
+
+Avoid making the map a small component surrounded by oversized cards.
+
+---
+
+# 4. APPLICATION STRUCTURE
+
+Build a complete application with the following main areas.
+
+## A. Application shell
+
+A professional Calcite shell containing:
+
+- FlowWatch Africa identity
+- Application navigation
+- Current operational context
+- Dataset and service status
+- Main map workspace
+- Collapsible side panels
+- Information and help area
+
+The application should feel cohesive, not like multiple unrelated pages.
+
+## B. Main operational map
+
+The map is the central feature.
+
+Use ArcGIS Maps SDK for JavaScript.
+
+Implement:
+
+- MapView
+- Map
+- Basemap
+- Layer management
+- Layer visibility
+- Layer ordering
+- Layer opacity
+- Legend
+- Scale bar
+- Zoom controls
+- Search
+- Basemap switching
+- Feature identification
+- Popups
+- Loading and error states
+- Responsive map layout
+
+The default extent must cover the Tana River Basin AOI.
+
+Do not use a generic Kenya-wide extent as the initial view if the basin boundary is available.
+
+Use the basin boundary and actual spatial data to determine the appropriate extent.
+
+Use a suitable basemap such as Topographic or Human Geography, with the ability to change basemaps.
+
+## C. Map layer explorer
+
+Create a professional layer explorer using Calcite components.
+
+Group layers logically:
+
+1. Rainfall and Climate
+2. Soil Moisture and Evapotranspiration
+3. Rivers and Hydrology
+4. Terrain and Catchment
+5. Surface Water
+6. Land Cover and Built Environment
+7. Population and Exposure
+
+Each layer should have:
+
+- Display name
+- Visibility switch
+- Layer description
+- Legend
+- Source period
+- Units where known
+- Opacity control where applicable
+- Loading status
+- Service availability status
+
+Do not display technical filenames as the main user-facing labels.
+
+Provide sensible default visibility. Avoid turning on every raster simultaneously.
+
+---
+
+# 5. DATA AND SERVICE INTEGRATION
+
+All the datasets below have been uploaded to ArcGIS Online and are publicly shared.
+
+Portal organisation:
+
+https://africageoportal.maps.arcgis.com
+
+IMPORTANT:
+
+The supplied links are mostly ArcGIS Portal item data endpoints:
+
+https://africageoportal.maps.arcgis.com/sharing/rest/content/items/ITEM_ID/data
+
+These are NOT automatically the actual ImageServer URLs.
+
+You must resolve the actual service URLs and layer types.
+
+For each item:
+
+1. Extract its item ID.
+2. Retrieve its public item metadata using the ArcGIS REST item endpoint.
+3. Inspect its item type, title, URL, description and relevant metadata.
+4. Identify whether it is a hosted imagery layer, tiled imagery layer, feature layer or another service type.
+5. Obtain the actual service URL.
+6. Verify that the endpoint responds successfully.
+7. Identify the correct ArcGIS Maps SDK layer class.
+8. Add the layer to the application using the appropriate class.
+
+Do not blindly use `/data` as the URL of an ImageryLayer.
+
+Do not assume all imagery services use the same layer class.
+
+For example:
+- Use ImageryLayer for appropriate dynamic imagery services.
+- Use ImageryTileLayer for appropriate tiled imagery services.
+- Use FeatureLayer for hosted feature services.
+
+Inspect the actual metadata before deciding.
+
+Where a service is unavailable, show an informative error and continue loading other services.
+
+Do not fabricate successful layer loading.
+
+Do not require the user to enter credentials for these publicly shared datasets.
+
+## DATA REGISTRY
+
+Create a central, typed data registry.
+
+Each dataset must have:
+
+- id
+- itemId
+- title
+- category
+- description
+- itemDataUrl
+- serviceUrl (resolved from item metadata)
+- layerType
+- visibleByDefault
+- opacity
+- period
+- units (only when verified)
+- source
+- status
+- legend information where known
+
+The following datasets are the source inventory.
+
+### RAINFALL AND CLIMATE
+
+**1. CHIRPS seasonal climatology 2001–2025**
+
+Item ID:
+0cafb49664b64d8281fa7f4dda734e97
+
+Item data URL:
+https://africageoportal.maps.arcgis.com/sharing/rest/content/items/0cafb49664b64d8281fa7f4dda734e97/data
+
+**2. CHIRPS seasonal 2026**
+
+Item ID:
+483fa00e14574b69b296909a5ff1023f
+
+Item data URL:
+https://africageoportal.maps.arcgis.com/sharing/rest/content/items/483fa00e14574b69b296909a5ff1023f/data
+
+**3. CHIRPS monthly climatology 2001–2025**
+
+Item ID:
+eac5ea7f479b409d80f69dda9b608609
+
+Item data URL:
+https://africageoportal.maps.arcgis.com/sharing/rest/content/items/eac5ea7f479b409d80f69dda9b608609/data
+
+**4. CHIRPS monthly 2026**
+
+Item ID:
+92899763f4b3421f82de9af25db450c9
+
+Item data URL:
+https://africageoportal.maps.arcgis.com/sharing/rest/content/items/92899763f4b3421f82de9af25db450c9/data
+
+**5. CHIRPS anomaly 2026**
+
+Item ID:
+8c53d070230d44b5a5368359d8e0aba4
+
+Item data URL:
+https://africageoportal.maps.arcgis.com/sharing/rest/content/items/8c53d070230d44b5a5368359d8e0aba4/data
+
+**6. CHIRPS annual statistics 2001–2025**
+
+Item ID:
+a49bfc31cb414668813c591f51446c05
+
+Item data URL:
+https://africageoportal.maps.arcgis.com/sharing/rest/content/items/a49bfc31cb414668813c591f51446c05/data
+
+**7. CHIRPS annual 2001–2025**
+
+Item ID:
+152261bad9614e16adbca0d1b960842d
+
+Item data URL:
+https://africageoportal.maps.arcgis.com/sharing/rest/content/items/152261bad9614e16adbca0d1b960842d/data
+
+### SOIL MOISTURE AND ATMOSPHERIC CONDITIONS
+
+**8. ERA5 soil moisture recent 2026**
+
+Item ID:
+aae7a128735f477fbb97552f7e6598b9
+
+Item data URL:
+https://africageoportal.maps.arcgis.com/sharing/rest/content/items/aae7a128735f477fbb97552f7e6598b9/data
+
+**9. ERA5 temperature 2026**
+
+Item ID:
+3a82b3ab720d4b00a0db20b4c2fdc0f6
+
+Item data URL:
+https://africageoportal.maps.arcgis.com/sharing/rest/content/items/3a82b3ab720d4b00a0db20b4c2fdc0f6/data
+
+**10. ERA5 soil moisture baseline 2001–2025**
+
+Item ID:
+17c6ec596303422eb2bf62b9aa89f73f
+
+Item data URL:
+https://africageoportal.maps.arcgis.com/sharing/rest/content/items/17c6ec596303422eb2bf62b9aa89f73f/data
+
+**11. ERA5 soil moisture anomaly 2026**
+
+Item ID:
+32caa1f895204faba25499c3be8530be
+
+Item data URL:
+https://africageoportal.maps.arcgis.com/sharing/rest/content/items/32caa1f895204faba25499c3be8530be/data
+
+**12. ERA5 PET 2026**
+
+Item ID:
+ba9a885ac8d34fb4b026dd898bafd2d8
+
+Item data URL:
+https://africageoportal.maps.arcgis.com/sharing/rest/content/items/ba9a885ac8d34fb4b026dd898bafd2d8/data
+
+### TERRAIN AND CATCHMENT
+
+**13. DEM**
+
+Item ID:
+7d997cccb0754d1bad502d99b6a03698
+
+Item data URL:
+https://africageoportal.maps.arcgis.com/sharing/rest/content/items/7d997cccb0754d1bad502d99b6a03698/data
+
+**14. Slope**
+
+Item ID:
+4004c9ec8ec14b13bbcee3a19c2694c5
+
+Item data URL:
+https://africageoportal.maps.arcgis.com/sharing/rest/content/items/4004c9ec8ec14b13bbcee3a19c2694c5/data
+
+**15. Flow direction**
+
+Item ID:
+fb0ecdfb0a314c24bce2fb39ed91a63b
+
+Item data URL:
+https://africageoportal.maps.arcgis.com/sharing/rest/content/items/fb0ecdfb0a314c24bce2fb39ed91a63b/data
+
+**16. Flow accumulation**
+
+Item ID:
+c853b62a787c45e9a4431594d27ccfbb
+
+Item data URL:
+https://africageoportal.maps.arcgis.com/sharing/rest/content/items/c853b62a787c45e9a4431594d27ccfbb/data
+
+**17. Height Above Nearest Drainage (HAND)**
+
+Item ID:
+69c37b1d239f49b9aa6daf3126b36fe9
+
+Item data URL:
+https://africageoportal.maps.arcgis.com/sharing/rest/content/items/69c37b1d239f49b9aa6daf3126b36fe9/data
+
+**18. Stream network, UPA 100 km²**
+
+Item ID:
+7cbd8bc60371462ebcb7dd789bf28c7c
+
+Item data URL:
+https://africageoportal.maps.arcgis.com/sharing/rest/content/items/7cbd8bc60371462ebcb7dd789bf28c7c/data
+
+### SURFACE WATER
+
+**19. Surface water seasonality**
+
+Item ID:
+1a07d48e59044dc7b7e19d9ac9a75683
+
+Item data URL:
+https://africageoportal.maps.arcgis.com/sharing/rest/content/items/1a07d48e59044dc7b7e19d9ac9a75683/data
+
+**20. Surface water occurrence**
+
+Item ID:
+1a4acb0eaad34c3ba6ed0804eae7be15
+
+Item data URL:
+https://africageoportal.maps.arcgis.com/sharing/rest/content/items/1a4acb0eaad34c3ba6ed0804eae7be15/data
+
+**21. Surface water extent transition**
+
+Item ID:
+bda6b3ef88814b00aefc6551f5ddb683
+
+Item data URL:
+https://africageoportal.maps.arcgis.com/sharing/rest/content/items/bda6b3ef88814b00aefc6551f5ddb683/data
+
+### LAND COVER, POPULATION AND HUMAN EXPOSURE
+
+**22. Land cover**
+
+Item ID:
+85dee424a76a43ca96d1657f8f4e28bf
+
+Item data URL:
+https://africageoportal.maps.arcgis.com/sharing/rest/content/items/85dee424a76a43ca96d1657f8f4e28bf/data
+
+**23. Population 2025**
+
+Item ID:
+8eb142a239f34993a72180478bb6c9f3
+
+Item data URL:
+https://africageoportal.maps.arcgis.com/sharing/rest/content/items/8eb142a239f34993a72180478bb6c9f3/data
+
+**24. Built-up 2020**
+
+Item ID:
+728dfadc55264d899e84dfc42255a5ab
+
+Item data URL:
+https://africageoportal.maps.arcgis.com/sharing/rest/content/items/728dfadc55264d899e84dfc42255a5ab/data
+
+### VISUALISATION DATASETS
+
+These are separate rendered visualisation products. Use them where appropriate for map display. Do not mistake them for the original analytical raster values.
+
+**25. Surface water seasonality visualisation**
+
+Item ID:
+debdb910423041db9c6ff3a853587e5c
+
+URL:
+https://africageoportal.maps.arcgis.com/sharing/rest/content/items/debdb910423041db9c6ff3a853587e5c/data
+
+**26. Surface water occurrence visualisation**
+
+Item ID:
+bc9b3917e3c549ce92f8ebb3c3b25e48
+
+URL:
+https://africageoportal.maps.arcgis.com/sharing/rest/content/items/bc9b3917e3c549ce92f8ebb3c3b25e48/data
+
+**27. Slope visualisation**
+
+Item ID:
+f883b88c8294441cb9fb959f17b3a593
+
+URL:
+https://africageoportal.maps.arcgis.com/sharing/rest/content/items/f883b88c8294441cb9fb959f17b3a593/data
+
+**28. Population visualisation**
+
+Item ID:
+0f508b9451894588afe38a6386a1b1d7
+
+URL:
+https://africageoportal.maps.arcgis.com/sharing/rest/content/items/0f508b9451894588afe38a6386a1b1d7/data
+
+**29. Land cover visualisation**
+
+Item ID:
+94bb1541e84347cfac5045faa37a7ff7
+
+URL:
+https://africageoportal.maps.arcgis.com/sharing/rest/content/items/94bb1541e84347cfac5045faa37a7ff7/data
+
+**30. HAND visualisation**
+
+Item ID:
+43b6722fd9f243619854a98c02e30143
+
+URL:
+https://africageoportal.maps.arcgis.com/sharing/rest/content/items/43b6722fd9f243619854a98c02e30143/data
+
+**31. Flow accumulation visualisation**
+
+Item ID:
+82c255ae87ce41c49db8c0a3520a0fe5
+
+URL:
+https://africageoportal.maps.arcgis.com/sharing/rest/content/items/82c255ae87ce41c49db8c0a3520a0fe5/data
+
+**32. Soil moisture anomaly visualisation**
+
+Item ID:
+25879b39ddd842739847ff83c94b8379
+
+URL:
+https://africageoportal.maps.arcgis.com/sharing/rest/content/items/25879b39ddd842739847ff83c94b8379/data
+
+**33. CHIRPS rainfall anomaly visualisation**
+
+Item ID:
+3cd94d6219954363aabd16b1d8d6ad46
+
+URL:
+https://africageoportal.maps.arcgis.com/sharing/rest/content/items/3cd94d6219954363aabd16b1d8d6ad46/data
+
+**34. CHIRPS annual statistics visualisation**
+
+Item ID:
+a7b54589e42749c98e5db3f185ac5d7b
+
+URL:
+https://africageoportal.maps.arcgis.com/sharing/rest/content/items/a7b54589e42749c98e5db3f185ac5d7b/data
+
+**35. Built-up 2020 visualisation**
+
+Item ID:
+906a779108a243beab18138e019b415e
+
+URL:
+https://africageoportal.maps.arcgis.com/sharing/rest/content/items/906a779108a243beab18138e019b415e/data
+
+**36. DEM visualisation**
+
+Item ID:
+9eddacc2af42446b8a9821fafee00250
+
+URL:
+https://africageoportal.maps.arcgis.com/sharing/rest/content/items/9eddacc2af42446b8a9821fafee00250/data
+
+### RIVER NETWORK FEATURE SERVICE
+
+**37. Tana River Streams**
+
+Service URL:
+https://services8.arcgis.com/oTalEaSXAuyNT7xf/arcgis/rest/services/tanariverstreams/FeatureServer
+
+Use a FeatureLayer and inspect its sublayer structure, geometry, fields and object IDs.
+
+Do not assume layer index 0 without checking the service metadata.
+
+---
+
+# 6. SERVICE DISCOVERY AND VALIDATION
+
+Create a robust service discovery module.
+
+For every item ID, query:
+
+https://africageoportal.maps.arcgis.com/sharing/rest/content/items/{ITEM_ID}?f=pjson
+
+Inspect the returned item metadata.
+
+Where necessary, inspect:
+
+https://africageoportal.maps.arcgis.com/sharing/rest/content/items/{ITEM_ID}/data?f=pjson
+
+Use the item metadata and service metadata to determine the correct endpoint and layer class.
+
+Validate:
+
+- Item exists
+- Item is public
+- Item type is recognised
+- Service URL exists
+- Service responds
+- Service has expected metadata
+- Layer can be loaded by the Maps SDK
+
+For imagery services, inspect available information such as:
+
+- Spatial reference
+- Extent
+- Pixel size
+- Band count
+- Pixel type
+- Raster information
+- Rendering rules
+- Multidimensional information, where available
+
+Do not invent units, dates, classifications or raster statistics.
+
+If metadata is unavailable, display an honest unknown or unavailable value.
+
+Do not put all service discovery logic directly inside the main React component.
+
+---
+
+# 7. MAIN APPLICATION EXPERIENCE
+
+Create the following functional application modules.
+
+## MODULE 1: OVERVIEW / SITUATION
+
+An operational overview that presents the current basin context.
+
+Include:
+
+- Basin map
+- Selected rainfall indicator
+- Soil moisture condition
+- Surface water context
+- River network
+- Terrain context
+- Data availability
+- Baseline period
+- Current dataset period
+
+Build indicator cards that display actual values only where the service provides a valid way to retrieve them.
+
+Do not insert fake statistics or placeholder percentages that appear real.
+
+If a raster value cannot be retrieved through the available service, indicate that the indicator is available for spatial exploration rather than inventing a numerical summary.
+
+## MODULE 2: CLIMATE AND RAINFALL
+
+Allow users to explore:
+
+- CHIRPS annual rainfall
+- Seasonal climatology
+- Monthly climatology
+- Current 2026 seasonal rainfall
+- Current 2026 monthly rainfall
+- Rainfall anomaly 2026
+- Annual rainfall statistics
+
+Provide:
+
+- Layer selection
+- Time period selection where applicable
+- Legend
+- Map inspection
+- Explanation of anomaly relative to baseline
+- Comparison between 2026 conditions and 2001–2025 climatology
+
+Make clear that 2026 is an incomplete year if the data period is incomplete.
+
+Do not compare incompatible temporal periods.
+
+## MODULE 3: SOIL MOISTURE AND ATMOSPHERIC CONDITIONS
+
+Allow exploration of:
+
+- Recent 2026 soil moisture
+- 2001–2025 soil moisture baseline
+- 2026 soil moisture anomaly
+- 2026 temperature
+- 2026 potential evapotranspiration
+
+Provide a clear comparison interface for baseline versus recent conditions.
+
+Explain what the indicator represents.
+
+Do not interpret PET as actual evapotranspiration.
+
+Do not claim that an anomaly alone proves drought.
+
+## MODULE 4: RIVER NETWORK AND CATCHMENT
+
+Use the Tana River Streams FeatureServer.
+
+Display the actual stream network.
+
+Inspect service fields before implementing popups.
+
+Where fields are available, provide:
+
+- Stream identification
+- Relevant stream attributes
+- Upstream contributing area
+- Map selection
+- Highlighting
+- Attribute inspection
+
+Use the flow accumulation and flow direction rasters as terrain-derived hydrological context.
+
+Do not present flow accumulation as observed discharge.
+
+## MODULE 5: TERRAIN AND FLOOD CONTEXT
+
+Allow users to explore:
+
+- DEM
+- Slope
+- HAND
+- Flow accumulation
+- Flow direction
+- Stream network
+
+Include a professional explanation panel.
+
+HAND can help investigate relative elevation above drainage. It is not a complete flood inundation model.
+
+Do not create fake flood extents or label the HAND raster as an actual flood forecast.
+
+## MODULE 6: SURFACE WATER INTELLIGENCE
+
+Allow users to inspect:
+
+- Surface water occurrence
+- Surface water seasonality
+- Surface water transition
+
+Include explanations of permanent, seasonal and changing surface water conditions based on the actual source data and metadata.
+
+Provide map legends and identify the source.
+
+## MODULE 7: EXPOSURE AND LANDSCAPE
+
+Explore:
+
+- Population 2025
+- Land cover
+- Built-up 2020
+
+Allow users to switch between the layers and investigate the relationship between environmental conditions and human exposure.
+
+Do not claim that population within a visual raster represents a verified number of people at risk without a valid spatial calculation and documented methodology.
+
+---
+
+# 8. THE DAM OPERATOR'S DILEMMA
+
+This is a distinctive feature of FlowWatch Africa.
+
+Build an interactive hypothetical reservoir operations simulator.
+
+The purpose is to help users understand how reservoir release decisions can create competing outcomes between water storage, downstream flow and water availability.
+
+This must be an explicitly labelled educational scenario simulator, not a live operational control system.
+
+Provide a clean interface with:
+
+- Initial reservoir storage
+- Inflow scenario
+- Proposed release volume
+- Remaining storage
+- Downstream release scenario
+- Water supply implications
+- Scenario comparison
+
+Allow users to adjust scenario parameters using Calcite controls.
+
+Display the resulting calculations and charts.
+
+Use transparent equations and explain every assumption.
+
+Do not fabricate actual Masinga Dam storage or inflow observations.
+
+Do not imply that the Tana River stream network raster gives reservoir inflow.
+
+Do not imply that a release from Masinga reaches Garissa unchanged. The Seven Forks cascade, intermediate reservoirs, tributaries and river routing affect downstream flows.
+
+Separate:
+- Verified operational reservoir data, if later connected
+- Hypothetical scenario inputs
+- Calculated scenario outputs
+
+If real reservoir data is unavailable, label the entire simulation clearly as illustrative.
+
+Provide a reset button and scenario comparison.
+
+---
+
+# 9. MAP INTERACTION AND INSPECTION
+
+Build a robust interactive map.
+
+Implement:
+
+- Layer visibility
+- Layer reordering where appropriate
+- Layer opacity
+- Legends
+- Identify
+- Popup inspection
+- Search
+- Zoom to layer
+- Zoom to selected feature
+- Basemap switching
+- Selected-feature highlighting
+- Layer loading states
+- Service error handling
+
+Use the correct renderer for each raster type.
+
+Do not assign random colour ramps.
+
+Use suitable environmental colour ramps:
+
+- Rainfall: sequential precipitation ramp
+- Rainfall anomaly: diverging dry-to-wet ramp
+- Soil moisture: sequential moisture ramp
+- Soil moisture anomaly: diverging dry-to-wet ramp
+- DEM: elevation ramp
+- Slope: terrain ramp
+- HAND: low-to-high elevation-above-drainage ramp
+- Land cover: categorical colours
+- Surface water: water-oriented colours
+- Population: sequential density ramp
+
+Where RGB visualisation datasets already contain rendered colours, preserve the original rendered appearance rather than applying an incompatible renderer.
+
+Do not apply analytical renderers to RGB visualisation products.
+
+For numerical imagery, use service metadata and actual raster properties before configuring renderers.
+
+Where possible, use the actual service legend or rendering information.
+
+---
+
+# 10. DATA QUALITY AND TRANSPARENCY
+
+Create a data information interface.
+
+For every layer, display the information that can be verified:
+
+- Dataset name
+- Source
+- Period
+- Spatial resolution
+- Units
+- Raster type or feature geometry
+- Baseline
+- Processing notes
+- Service status
+
+Do not invent any of these values.
+
+Different datasets may have different native resolutions. Do not pretend they all have the same spatial resolution.
+
+Preserve original analytical raster values.
+
+The application must distinguish:
+
+1. Original analytical raster
+2. Rendered visualisation raster
+3. Feature service
+4. Derived calculation
+5. Hypothetical simulation
+
+Do not confuse these categories.
+
+---
+
+# 11. USER EXPERIENCE
+
+The application must be functional, not decorative.
+
+Every button, tab, switch and selector must have a working action.
+
+Include:
+
+- Useful empty states
+- Loading indicators
+- Error messages
+- Tooltips
+- Responsive behaviour
+- Accessible controls
+- Keyboard-friendly interactions
+- Clear layer naming
+- Consistent spacing
+- Proper legends
+
+Avoid:
+- Dead buttons
+- Fake charts
+- Fake data
+- Hardcoded random statistics
+- Generic placeholder text
+- Unnecessary animations
+- Overcrowded cards
+- Excessive gradients
+- Excessive popups
+- Confusing navigation
+
+---
+
+# 12. ENGINEERING REQUIREMENTS
+
+Use a clean project structure.
+
+Suggested structure:
+
+src/
+  components/
+    app/
+    layout/
+    map/
+    layers/
+    legends/
+    dashboards/
+    simulator/
+    shared/
+  config/
+    dataRegistry.ts
+    mapConfig.ts
+    theme.ts
+  hooks/
+  services/
+    arcgis/
+    metadata/
+    raster/
+  types/
+  utils/
+  styles/
+  App.tsx
+  main.tsx
+
+The exact structure may be improved where necessary.
+
+Use:
+
+- TypeScript types
+- Reusable components
+- Separation of concerns
+- Centralised service registry
+- Centralised map configuration
+- Proper React state management
+- Error boundaries
+- Async loading handling
+- No duplicated service definitions
+- No hardcoded credentials
+
+Avoid putting the entire application in one component.
+
+Use a supported and compatible ArcGIS Maps SDK version.
+
+Use the official Calcite components and their correct versions.
+
+Do not use deprecated APIs when a supported alternative exists.
+
+---
+
+# 13. IMPLEMENTATION SEQUENCE
+
+Build the application in this order.
+
+### Phase 1: Foundation
+
+- Create React and TypeScript application.
+- Install and configure ArcGIS Maps SDK.
+- Install and configure Calcite.
+- Establish Calcite theme and design tokens.
+- Build the application shell.
+- Create the main map workspace.
+- Confirm that the map renders.
+- Confirm that Calcite components render and function.
+
+### Phase 2: Service integration
+
+- Create the complete dataset registry.
+- Resolve item metadata.
+- Discover actual service URLs.
+- Inspect service types.
+- Load the Tana River Streams FeatureServer.
+- Load initial rainfall and terrain imagery.
+- Validate each service.
+- Implement service status handling.
+
+### Phase 3: Layer management
+
+- Implement layer explorer.
+- Implement categories.
+- Implement visibility controls.
+- Implement opacity controls.
+- Implement legends.
+- Implement layer identification.
+- Implement popups.
+
+### Phase 4: Intelligence modules
+
+- Build rainfall and climate exploration.
+- Build soil moisture exploration.
+- Build river and catchment exploration.
+- Build terrain and flood context.
+- Build surface water intelligence.
+- Build population and land cover exploration.
+
+### Phase 5: Dam Operator's Dilemma
+
+- Build scenario controls.
+- Implement transparent calculations.
+- Build scenario comparison.
+- Add charts.
+- Clearly label hypothetical values.
+
+### Phase 6: Final refinement
+
+- Responsive interface.
+- Error handling.
+- Accessibility.
+- Performance.
+- Layer loading verification.
+- UI consistency.
+- Remove dead controls and fake data.
+
+---
+
+# 14. IMPORTANT DEVELOPMENT RULES
+
+You are expected to make decisions and implement them rather than repeatedly asking me questions about obvious engineering choices.
+
+Do not reduce the scope to a simple map with a few layer toggles.
+
+Do not replace Calcite with generic UI components.
+
+Do not replace ArcGIS Maps SDK with Leaflet, Mapbox or Google Maps.
+
+Do not invent new data sources or claim that external data exists when it has not been connected.
+
+Do not make every dataset visible at once.
+
+Do not hardcode service URLs as if every item were the same service type.
+
+Do not use the item `/data` endpoint as an imagery service URL without resolving its metadata.
+
+Do not fabricate streamflow values, reservoir observations or flood forecasts.
+
+If a service cannot be accessed, isolate the problem, report it and continue building the rest of the application.
+
+Do not stop after generating the initial interface.
+
+Implement the actual application and test its functionality.
+
+---
+
+# 15. DEFINITION OF DONE
+
+The application is not complete merely because the home screen looks attractive.
+
+The build must demonstrate:
+
+1. Calcite powers the entire interface.
+2. ArcGIS Maps SDK powers the map.
+3. The Tana River Streams service loads.
+4. Public imagery services are resolved and loaded correctly.
+5. Layers can be switched on and off.
+6. Legends match the relevant layers.
+7. Layer information is accessible.
+8. The application distinguishes analytical and visualisation rasters.
+9. Rainfall and soil moisture modules work.
+10. Terrain and surface water modules work.
+11. The Dam Operator's Dilemma simulator calculates and compares hypothetical scenarios.
+12. The application handles failed services without crashing.
+13. The interface works on different screen sizes.
+14. There are no fake statistics presented as real observations.
+15. The project can be run locally for final testing.
+
+**Start implementing now. Build the actual FlowWatch Africa application. Do not respond with another proposal or a generic design description.**
