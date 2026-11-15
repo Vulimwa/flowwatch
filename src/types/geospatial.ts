@@ -3,7 +3,8 @@ export type AppModuleId =
   | 'streamflow'
   | 'catchment_response'
   | 'impact_exposure'
-  | 'water_operations';
+  | 'water_operations'
+  | 'river_3d_explorer';
 
 export type SupportingToolId = 'layers' | 'registry' | 'indicators';
 
@@ -223,6 +224,21 @@ export interface GeoglowsReachRecord {
   bbox: [number, number, number, number];
   paths: number[][][];
   damPosition: 'upstream_masinga' | 'seven_forks_cascade' | 'downstream_cascade' | 'tributary_or_outside';
+}
+
+export interface RiverJourneyCameraTarget {
+  longitude: number;
+  latitude: number;
+  heading: number;
+  durationMs: number;
+  nonce: number;
+  linkno: number;
+  localMatchVerified: boolean;
+}
+
+export interface RiverProfileMarker {
+  longitude: number;
+  latitude: number;
 }
 
 export interface TanaReachMatch {

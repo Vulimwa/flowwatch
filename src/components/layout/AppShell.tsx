@@ -27,6 +27,7 @@ import { DatasetInfoDialog, HelpDialog } from '../shared/DatasetInfoDialog';
 import { BasinSituationWorkspace } from '../workspaces/BasinSituationWorkspace';
 import { CatchmentResponseWorkspace } from '../workspaces/CatchmentResponseWorkspace';
 import { ImpactExposureWorkspace } from '../workspaces/ImpactExposureWorkspace';
+import { River3DExplorerWorkspace } from '../workspaces/River3DExplorerWorkspace';
 import { StreamflowWorkspace } from '../workspaces/StreamflowWorkspace';
 import { WaterOperationsWorkspace } from '../workspaces/WaterOperationsWorkspace';
 
@@ -43,6 +44,7 @@ const WORKSPACES: Array<{
   { id: 'catchment_response', label: 'Catchment Response', shortLabel: 'Catchment', icon: 'rain' },
   { id: 'impact_exposure', label: 'Impact & Exposure Screening', shortLabel: 'Impact & Exposure', icon: 'user' },
   { id: 'water_operations', label: 'Water Operations Lab', shortLabel: 'Water Ops', icon: 'sliders-horizontal' },
+  { id: 'river_3d_explorer', label: 'Tana River 3D Intelligence Explorer', shortLabel: '3D Explorer', icon: 'globe' },
 ];
 
 export function AppShell() {
@@ -67,6 +69,7 @@ export function AppShell() {
 
   const handleSelectWorkspace = (id: AppModuleId) => {
     state.setActiveModule(id);
+    if (id === 'river_3d_explorer') state.setMapMode('3d');
     setLeftTab('workspace');
     state.setLeftPanelOpen(true);
   };
@@ -215,6 +218,30 @@ export function AppShell() {
             onOpenIndicatorInfo={state.setActiveIndicatorId}
           />
         );
+      case 'river_3d_explorer':
+        return (
+          <River3DExplorerWorkspace
+            subBasins={state.subBasins}
+            subBasinsLoading={state.subBasinsLoading}
+            subBasinsError={state.subBasinsError}
+            onReloadSubBasins={state.reloadSubBasins}
+            selectedHybasId={state.selectedHybasId}
+            onSelectHybasId={state.selectHybasId}
+            geoglowsIndex={state.geoglowsIndex}
+            geoglowsIndexLoading={state.geoglowsIndexLoading}
+            geoglowsIndexError={state.geoglowsIndexError}
+            selectedLinkno={state.selectedLinkno}
+            mapMode={state.mapMode}
+            onMapModeChange={state.setMapMode}
+            onSelectGeoglowsReach={state.selectGeoglowsReach}
+            onResetHome={state.resetHomeExtent}
+            onJourneyTargetChange={state.setRiverJourneyTarget}
+            onProfileMarkerChange={state.setRiverProfileMarker}
+            geoglowsForecastTimeMs={state.geoglowsForecastTimeMs}
+            onChangeGeoglowsTimeMs={state.setGeoglowsForecastTimeMs}
+            onNavigateWorkspace={handleSelectWorkspace}
+          />
+        );
       default:
         return null;
     }
@@ -237,7 +264,9 @@ export function AppShell() {
         displayMode="dock"
         widthScale={
           leftTab === 'workspace' &&
-          (state.activeModule === 'streamflow' || state.activeModule === 'basin_situation')
+          (state.activeModule === 'streamflow' ||
+            state.activeModule === 'basin_situation' ||
+            state.activeModule === 'river_3d_explorer')
             ? 'l'
             : 'm'
         }
@@ -361,6 +390,8 @@ export function AppShell() {
           mapLayersEnabled={state.mapLayersEnabled}
           onMapLayersEnabledChange={state.setMapLayersEnabled}
           darkTheme={state.darkTheme}
+          journeyTarget={state.riverJourneyTarget}
+          profileMarker={state.riverProfileMarker}
           layersState={state.layersState}
           subBasins={state.subBasins}
           selectedHybasId={state.selectedHybasId}

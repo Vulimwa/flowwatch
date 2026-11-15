@@ -68,6 +68,7 @@ import {
   type CameraPreset3D,
 } from '../../config/mapConfig';
 import type { LayerRuntimeState } from '../../hooks/useFlowWatchState';
+import { queryTrueTerrainElevation } from '../../services/arcgis/riverTerrainProfile';
 import { identifyGeoglowsReachAtPoint } from '../../services/geoglows/geoglowsService';
 import { probeVisibleRasters } from '../../services/raster/rasterService';
 import type {
@@ -75,6 +76,8 @@ import type {
   ExposureScreeningResult,
   GeoglowsReachRecord,
   IdentifyResult,
+  RiverJourneyCameraTarget,
+  RiverProfileMarker,
   StreamFeatureHit,
   SubBasinPolygon,
   TanaReachMatch,
@@ -157,6 +160,8 @@ interface BasinMapViewProps {
   mapLayersEnabled: boolean;
   onMapLayersEnabledChange: (enabled: boolean) => void;
   darkTheme: boolean;
+  journeyTarget: RiverJourneyCameraTarget | null;
+  profileMarker: RiverProfileMarker | null;
   layersState: Record<string, LayerRuntimeState>;
   subBasins: SubBasinPolygon[];
   selectedHybasId: number | 'all';
@@ -199,6 +204,8 @@ export function BasinMapView({
   mapLayersEnabled,
   onMapLayersEnabledChange,
   darkTheme,
+  journeyTarget,
+  profileMarker,
   layersState,
   subBasins,
   selectedHybasId,
@@ -453,7 +460,7 @@ export function BasinMapView({
               ? {
                   position: {
                     longitude: preserved.center[0],
-                    latitude: preserved.center[1] - 0.85,
+                    latitude: preserved.center[1],
                     z: Math.max(12000, Math.min(220000, (preserved.scale || 1_400_000) * 0.085)),
                   },
                   heading: 334,
@@ -549,17 +556,48 @@ export function BasinMapView({
         );
       });
 
+    let pointerElevationTimer: number | null = null;
+    let pointerElevationController: AbortController | null = null;
+    let pointerQueryToken = 0;
     const moveHandle = view.on('pointer-move', (evt) => {
       const pt = view.toMap({ x: evt.x, y: evt.y });
       if (pt && typeof pt.longitude === 'number' && typeof pt.latitude === 'number') {
-        const rawZ = view.type === '3d' && typeof pt.z === 'number' && Number.isFinite(pt.z) ? pt.z : null;
-        const trueElevM =
-          rawZ !== null ? rawZ / Math.max(1, terrainExaggerationRef.current) : null;
+        const longitude = pt.longitude;
+        const latitude = pt.latitude;
         setPointerCoords({
-          lon: pt.longitude,
-          lat: pt.latitude,
-          elevM: trueElevM,
+          lon: longitude,
+          lat: latitude,
+          elevM: null,
         });
+        if (pointerElevationTimer !== null) window.clearTimeout(pointerElevationTimer);
+        pointerElevationController?.abort();
+        const queryToken = ++pointerQueryToken;
+        pointerElevationTimer = window.setTimeout(() => {
+          const controller = new AbortController();
+          pointerElevationController = controller;
+          void queryTrueTerrainElevation(longitude, latitude, controller.signal)
+            .then((elevation) => {
+              if (queryToken !== pointerQueryToken || controller.signal.aborted) return;
+              setPointerCoords((current) =>
+                current &&
+                Math.abs(current.lon - longitude) < 1e-8 &&
+                Math.abs(current.lat - latitude) < 1e-8
+                  ? { ...current, elevM: elevation }
+                  : current
+              );
+            })
+            .catch((err: unknown) => {
+              if (!(err instanceof Error) || err.name !== 'AbortError') {
+                setPointerCoords((current) =>
+                  current &&
+                  Math.abs(current.lon - longitude) < 1e-8 &&
+                  Math.abs(current.lat - latitude) < 1e-8
+                    ? { ...current, elevM: null }
+                    : current
+                );
+              }
+            });
+        }, 350);
       }
     });
 
@@ -570,12 +608,6 @@ export function BasinMapView({
       }
       const lon = mapPt.longitude;
       const lat = mapPt.latitude;
-      const rawZ =
-        view.type === '3d' && typeof mapPt.z === 'number' && Number.isFinite(mapPt.z)
-          ? mapPt.z
-          : null;
-      const elevationMeters =
-        rawZ !== null ? rawZ / Math.max(1, terrainExaggerationRef.current) : null;
 
       onIdentifyStart();
       onOpenIdentifyTab();
@@ -628,7 +660,7 @@ export function BasinMapView({
       const canHitTestStreams =
         mapLayersEnabledRef.current && map.layers.includes(streamsLayer);
 
-      const [hitRes, geoglowsIdRes, rasterProbes] = await Promise.all([
+      const [hitRes, geoglowsIdRes, rasterProbes, elevationMeters] = await Promise.all([
         canHitTestStreams
           ? view.hitTest(evt, { include: [streamsLayer] }).catch(() => null)
           : Promise.resolve(null),
@@ -638,6 +670,7 @@ export function BasinMapView({
           apiNearestRiverId: null,
         })),
         probeVisibleRasters(activeRasters, lon, lat),
+        queryTrueTerrainElevation(lon, lat).catch(() => null),
       ]);
 
       let streamHit: StreamFeatureHit | null = null;
@@ -674,11 +707,15 @@ export function BasinMapView({
             geoglowsVerifyMessage = 'GEOGLOWS reach identifier not verified for this segment.';
             onIdentifyReachSelection(null, tanaMatch, geoglowsVerifyMessage);
           }
-        } else if (geoglowsIdRes.reach) {
+        } else if (geoglowsIdRes.reach?.matchedFids.length) {
           geoglowsReach = geoglowsIdRes.reach;
           onIdentifyReachSelection(geoglowsReach.linkno, null, null);
+        } else if (geoglowsIdRes.reach) {
+          geoglowsVerifyMessage =
+            'Nearby GEOGLOWS reach has no verified local Tana river match; flow values are not assigned.';
+          onIdentifyReachSelection(null, null, geoglowsVerifyMessage);
         }
-      } else if (geoglowsIdRes.reach) {
+      } else if (geoglowsIdRes.reach?.matchedFids.length) {
         geoglowsReach = geoglowsIdRes.reach;
         const matchedFid = geoglowsReach.matchedFids?.[0] ?? null;
         if (matchedFid !== null) {
@@ -686,6 +723,10 @@ export function BasinMapView({
           tanaMatch = tanaMatchByFidRef.current.get(matchedFid) || null;
         }
         onIdentifyReachSelection(geoglowsReach.linkno, tanaMatch, null);
+      } else if (geoglowsIdRes.reach) {
+        geoglowsVerifyMessage =
+          'Nearby GEOGLOWS reach has no verified local Tana river match; flow values are not assigned.';
+        onIdentifyReachSelection(null, null, geoglowsVerifyMessage);
       }
 
       onIdentifyComplete({
@@ -716,6 +757,9 @@ export function BasinMapView({
       }
 
       cameraWatchHandle?.remove();
+      if (pointerElevationTimer !== null) window.clearTimeout(pointerElevationTimer);
+      pointerElevationController?.abort();
+      pointerQueryToken++;
       moveHandle.remove();
       clickHandle.remove();
       searchWidgetRef.current?.destroy();
@@ -734,6 +778,105 @@ export function BasinMapView({
     if (!map || viewMode !== '3d' || !mapReady) return;
     map.ground = createTerrainGround(terrainExaggeration);
   }, [terrainExaggeration, viewMode, mapReady]);
+
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view || view.type !== '3d' || !mapReady || !journeyTarget) return;
+    view
+      .goTo(
+        {
+          target: new Point({
+            longitude: journeyTarget.longitude,
+            latitude: journeyTarget.latitude,
+            spatialReference: { wkid: 4326 },
+          }),
+          zoom: 14,
+          tilt: 66,
+          heading: journeyTarget.heading,
+        },
+        { duration: journeyTarget.durationMs, easing: 'linear' }
+      )
+      .catch((err: unknown) => {
+        if (err instanceof Error && err.name === 'AbortError') return;
+        setMapError(
+          err instanceof Error
+            ? `River journey camera could not move: ${err.message}`
+            : 'River journey camera could not move.'
+        );
+      });
+  }, [journeyTarget, mapReady, viewMode]);
+
+  useEffect(() => {
+    const highlightLayer = highlightLayerRef.current;
+    if (!highlightLayer || !mapReady) return;
+    highlightLayer.removeMany(
+      highlightLayer.graphics
+        .filter((graphic) => graphic.attributes?.kind === 'river-profile-marker')
+        .toArray()
+    );
+    if (!profileMarker) return;
+    highlightLayer.add(
+      new Graphic({
+        geometry: new Point({
+          longitude: profileMarker.longitude,
+          latitude: profileMarker.latitude,
+          spatialReference: { wkid: 4326 },
+        }),
+        attributes: { kind: 'river-profile-marker' },
+        symbol: new SimpleMarkerSymbol({
+          style: 'circle',
+          color: [255, 255, 255, 0.95],
+          size: 12,
+          outline: { color: [0, 122, 194, 1], width: 3 },
+        }),
+      })
+    );
+  }, [profileMarker, mapReady, viewMode]);
+
+  useEffect(() => {
+    const highlightLayer = highlightLayerRef.current;
+    if (!highlightLayer || !mapReady) return;
+    highlightLayer.removeMany(
+      highlightLayer.graphics
+        .filter((graphic) => graphic.attributes?.kind === 'river-journey-reach')
+        .toArray()
+    );
+    if (
+      !journeyTarget ||
+      journeyTarget.linkno === selectedLinkno ||
+      !reachByLinkno.has(journeyTarget.linkno)
+    ) {
+      return;
+    }
+    const reach = reachByLinkno.get(journeyTarget.linkno);
+    if (!reach || reach.paths.length === 0) return;
+    highlightLayer.add(
+      new Graphic({
+        geometry: new Polyline({
+          paths: reach.paths,
+          spatialReference: { wkid: 4326 },
+        }),
+        attributes: {
+          kind: 'river-journey-reach',
+          linkno: journeyTarget.linkno,
+          localMatchVerified: journeyTarget.localMatchVerified,
+        },
+        symbol: new SimpleLineSymbol({
+          color: journeyTarget.localMatchVerified
+            ? [245, 158, 11, 0.96]
+            : [100, 116, 139, 0.92],
+          width: 3,
+        }),
+      })
+    );
+  }, [
+    journeyTarget?.linkno,
+    journeyTarget?.localMatchVerified,
+    selectedLinkno,
+    reachByLinkno,
+    mapReady,
+    viewMode,
+  ]);
 
   // Sync SceneView dark theme stars & atmosphere
   useEffect(() => {

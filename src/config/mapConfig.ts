@@ -63,9 +63,9 @@ export interface CameraPreset3D {
 export const TANA_3D_CAMERA_PRESETS: CameraPreset3D[] = [
   {
     id: 'basin_oblique',
-    label: 'Upper Tana Basin Oblique',
-    description: 'Full basin vista looking NNW toward Mount Kenya headwaters',
-    position: [38.32, -1.62, 132000],
+    label: 'Basin Overview',
+    description: 'Overview of the five selected Upper Tana sub-basins',
+    position: [37.6, -0.4, 140000],
     heading: 332,
     tilt: 56,
   },

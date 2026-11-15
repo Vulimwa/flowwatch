@@ -601,7 +601,9 @@ export async function getTanaGeoglowsReachIndex(
 export async function validateLinknoInBasin(linkno: number): Promise<GeoglowsReachRecord | null> {
   if (!Number.isInteger(linkno) || linkno <= 0) return null;
   const idx = await getTanaGeoglowsReachIndex();
-  return idx.reaches.find((r) => r.linkno === linkno) || null;
+  return (
+    idx.reaches.find((r) => r.linkno === linkno && r.matchedFids.length > 0) || null
+  );
 }
 
 // ---------------------------------------------------------------------------

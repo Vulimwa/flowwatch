@@ -25,6 +25,8 @@ import type {
   GeoglowsReachRecord,
   IdentifyResult,
   RasterRenderResult,
+  RiverJourneyCameraTarget,
+  RiverProfileMarker,
   ServiceStatus,
   StreamflowAnalysisResult,
   SubBasinPolygon,
@@ -45,6 +47,9 @@ export function useFlowWatchState() {
   const [activeModule, setActiveModule] = useState<AppModuleId>('basin_situation');
   const [basemapId, setBasemapId] = useState<string>('topo-vector');
   const [mapMode, setMapMode] = useState<'2d' | '3d'>('2d');
+  const [riverJourneyTarget, setRiverJourneyTarget] =
+    useState<RiverJourneyCameraTarget | null>(null);
+  const [riverProfileMarker, setRiverProfileMarker] = useState<RiverProfileMarker | null>(null);
   const [terrainExaggeration, setTerrainExaggeration] = useState<number>(2);
   const [mapLayersEnabled, setMapLayersEnabledState] = useState<boolean>(true);
   const [leftPanelOpen, setLeftPanelOpen] = useState<boolean>(false);
@@ -57,6 +62,8 @@ export function useFlowWatchState() {
 
   // HydroBASINS Level-7 Sub-Basins, Zonal Stats & Live NOAA ENSO
   const [subBasins, setSubBasins] = useState<SubBasinPolygon[]>([]);
+  const [subBasinsLoading, setSubBasinsLoading] = useState(true);
+  const [subBasinsError, setSubBasinsError] = useState<string | null>(null);
   const [selectedHybasId, setSelectedHybasId] = useState<number | 'all'>('all');
   const [zonalStats, setZonalStats] = useState<BasinZonalStatsResponse | null>(null);
   const [zonalLoading, setZonalLoading] = useState<boolean>(true);
@@ -141,12 +148,35 @@ export function useFlowWatchState() {
     void loadGeoglowsInfrastructure(false);
   }, [loadGeoglowsInfrastructure]);
 
+  const loadSubBasins = useCallback(async (refresh = false, signal?: AbortSignal) => {
+    setSubBasinsLoading(true);
+    setSubBasinsError(null);
+    try {
+      const response = await fetchTanaSubBasins(refresh, signal);
+      if (response.subBasins.length !== 5) {
+        throw new Error(
+          `The study-area service returned ${response.subBasins.length} of 5 expected sub-basins.`
+        );
+      }
+      setSubBasins(response.subBasins);
+    } catch (error) {
+      if (signal?.aborted) return;
+      setSubBasinsError(
+        error instanceof Error ? error.message : 'Failed to load study-area sub-basins.'
+      );
+    } finally {
+      if (!signal?.aborted) setSubBasinsLoading(false);
+    }
+  }, []);
+
+  const reloadSubBasins = useCallback(() => {
+    void loadSubBasins(true);
+  }, [loadSubBasins]);
+
   // Load 5-sub-basin HydroBASINS L7 polygons, polygon-masked zonal stats & NOAA CPC ONI on mount
   useEffect(() => {
     const controller = new AbortController();
-    fetchTanaSubBasins(false, controller.signal)
-      .then((res) => setSubBasins(res.subBasins))
-      .catch(() => {});
+    void loadSubBasins(false, controller.signal);
 
     setZonalLoading(true);
     fetchBasinZonalStats(false, controller.signal)
@@ -165,7 +195,7 @@ export function useFlowWatchState() {
       .catch(() => setEnsoLoading(false));
 
     return () => controller.abort();
-  }, []);
+  }, [loadSubBasins]);
 
   // Discover all ArcGIS items, FeatureServer, & GEOGLOWS MapServer metadata on mount
   useEffect(() => {
@@ -215,7 +245,7 @@ export function useFlowWatchState() {
   useEffect(() => {
     if (
       geoglowsIndex &&
-      geoglowsIndex.reaches.length > 0 &&
+      geoglowsIndex.reaches.some((reach) => reach.matchedFids.length > 0) &&
       selectedLinkno === null &&
       !geoglowsUnverifiedMsg
     ) {
@@ -224,7 +254,8 @@ export function useFlowWatchState() {
           (r) =>
             r.matchedLocalNames.some((n) => /tana/i.test(n)) &&
             r.matchedFids.length > 0
-        ) || geoglowsIndex.reaches[0];
+        ) || geoglowsIndex.reaches.find((reach) => reach.matchedFids.length > 0);
+      if (!preferred) return;
       setSelectedLinkno(preferred.linkno);
       if (preferred.matchedFids.length > 0) {
         const fid = preferred.matchedFids[0];
@@ -496,9 +527,19 @@ export function useFlowWatchState() {
     (linkno: number | null, zoom = false) => {
       if (linkno === null) {
         setSelectedLinkno(null);
+        setSelectedTanaMatch(null);
+        setGeoglowsUnverifiedMsg(null);
         return;
       }
       const reach = reachByLinkno.get(linkno);
+    if (!reach || reach.matchedFids.length === 0) {
+      setSelectedLinkno(null);
+      setSelectedTanaMatch(null);
+      setGeoglowsUnverifiedMsg(
+        'This GEOGLOWS reach has no verified local Tana river match; reach-specific flow data are blocked.'
+      );
+      return;
+    }
       setSelectedLinkno(linkno);
       setGeoglowsUnverifiedMsg(null);
       if (reach && reach.matchedFids.length > 0) {
@@ -576,6 +617,10 @@ export function useFlowWatchState() {
     setBasemapId,
     mapMode,
     setMapMode,
+    riverJourneyTarget,
+    setRiverJourneyTarget,
+    riverProfileMarker,
+    setRiverProfileMarker,
     terrainExaggeration,
     setTerrainExaggeration,
     mapLayersEnabled,
@@ -592,6 +637,9 @@ export function useFlowWatchState() {
     metadataById,
     discoveryComplete,
     subBasins,
+    subBasinsLoading,
+    subBasinsError,
+    reloadSubBasins,
     selectedHybasId,
     selectHybasId,
     zonalStats,

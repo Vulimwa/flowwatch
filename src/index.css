@@ -7,6 +7,7 @@
   line-height: 1.45;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
+  --flowwatch-small-font-size: 0.75rem;
 }
 
 html,
@@ -31,6 +32,16 @@ textarea {
 
 .flowwatch-shell {
   --calcite-font-family: "Avenir Next", Avenir, "Helvetica Neue", sans-serif;
+  --calcite-code-family: var(--calcite-font-family);
+  font-family: var(--calcite-font-family);
+}
+
+.flowwatch-shell .text-xs {
+  font-family: var(--calcite-font-family);
+  font-size: var(--flowwatch-small-font-size);
+}
+
+.flowwatch-shell svg text {
   font-family: var(--calcite-font-family);
 }
 
