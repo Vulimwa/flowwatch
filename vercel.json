@@ -3,21 +3,8 @@
   "outputDirectory": "dist",
   "rewrites": [
     {
-      "source": "/calcite-assets/:path*",
-      "destination": "/api/calcite-assets/:path*"
-    },
-    {
-      "source": "/arcgis-assets/:path*",
-      "destination": "/api/arcgis-assets/:path*"
-    },
-    {
       "source": "/:path*",
       "destination": "/index.html"
     }
-  ],
-  "functions": {
-    "api/**/*.ts": {
-      "includeFiles": "node_modules/{@esri/calcite-components/dist/cdn,@arcgis/core/assets}/**"
-    }
-  }
+  ]
 }

@@ -1054,14 +1054,6 @@ async function createApp(): Promise<Express> {
 
   // Vite Dev Middleware or Static Production Build
   if (process.env.VERCEL) {
-    app.use(
-      '/api/calcite-assets',
-      express.static(path.join(PROJECT_ROOT, 'node_modules/@esri/calcite-components/dist/cdn'))
-    );
-    app.use(
-      '/api/arcgis-assets',
-      express.static(path.join(PROJECT_ROOT, 'node_modules/@arcgis/core/assets'))
-    );
     return app;
   }
 

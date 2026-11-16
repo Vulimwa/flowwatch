@@ -362,13 +362,11 @@ export function AppShell() {
       const step = GUIDED_DEMO_STEPS[stepIndex];
       const current = stateRef.current;
       handleSelectWorkspace(step.module);
-      await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
 
       if (step.id === 'basin-question') {
-        const mapReady = await waitForCondition(() => mapReadyRef.current, 12_000);
-        return mapReady
+        return mapReadyRef.current
           ? undefined
-          : { notice: 'The map is still initializing. The overview remains available, and the text guide continues.' };
+          : { notice: 'The map is still initializing. The overview remains available while the chapter continues.' };
       }
 
       if (step.id === 'rainfall-signal' || step.id === 'soil-and-demand') {

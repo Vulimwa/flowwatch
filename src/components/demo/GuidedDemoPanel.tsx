@@ -43,15 +43,15 @@ export function GuidedDemoPanel({
 
   return (
     <section className="flowwatch-guide-section" aria-label="Guided GIS demonstration">
-      <div className="mb-2 flex items-start justify-between gap-2">
-        <div>
+      <div className="flowwatch-demo-header mb-2">
+        <div className="flowwatch-demo-heading">
           <div className="text-sm font-semibold">Guided GIS Demo</div>
           <div className="text-xs text-[var(--calcite-color-text-3)]">
             Seven chapters · approximately 6 minutes
           </div>
         </div>
         {!state.running && !state.completed && (
-          <CalciteButton scale="s" kind="brand" iconStart="play" onClick={onStart}>
+          <CalciteButton className="flowwatch-demo-start" scale="s" kind="brand" iconStart="play" onClick={onStart}>
             Start
           </CalciteButton>
         )}
@@ -85,7 +85,7 @@ export function GuidedDemoPanel({
             </CalciteNotice>
           )}
 
-          <div className="mt-2 flex flex-wrap gap-2">
+          <div className="flowwatch-demo-actions mt-2">
             {state.running && (
               <>
                 <CalciteButton

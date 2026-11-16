@@ -84,10 +84,95 @@ textarea {
 }
 
 .flowwatch-guide-panel {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
   max-height: 100%;
   overflow: auto;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
+  overflow-wrap: anywhere;
+  container-type: inline-size;
+}
+
+.flowwatch-guide-panel calcite-label,
+.flowwatch-guide-panel calcite-select {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.flowwatch-guide-panel calcite-button {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.flowwatch-guide-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 0.5rem;
+}
+
+.flowwatch-guide-heading {
+  min-width: 0;
+}
+
+.flowwatch-demo-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 0.5rem;
+}
+
+.flowwatch-demo-heading {
+  min-width: 0;
+}
+
+.flowwatch-guide-panel .flowwatch-demo-header > calcite-button {
+  width: auto;
+}
+
+.flowwatch-guide-actions,
+.flowwatch-demo-actions,
+.flowwatch-welcome-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.flowwatch-guide-section {
+  min-width: 0;
+}
+
+.flowwatch-demo-start,
+.flowwatch-control-help {
+  display: block;
+}
+
+@container (max-width: 260px) {
+  .flowwatch-guide-header {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .flowwatch-demo-header {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .flowwatch-guide-panel .flowwatch-demo-header > calcite-button {
+    width: 100%;
+  }
+
+  .flowwatch-guide-actions,
+  .flowwatch-demo-actions,
+  .flowwatch-welcome-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .flowwatch-guide-section {

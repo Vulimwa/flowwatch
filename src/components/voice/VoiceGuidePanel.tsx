@@ -67,7 +67,7 @@ export function VoiceGuidePanel({
             The guided demo walks through seven chapters using the existing map and workspaces. Voice
             playback is optional; readable narration remains available.
           </div>
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="flowwatch-welcome-actions mt-3">
             <CalciteButton
               scale="s"
               kind="brand"
@@ -100,8 +100,8 @@ export function VoiceGuidePanel({
       )}
 
       <section className="flowwatch-guide-section">
-        <div className="mb-2 flex items-center justify-between gap-2">
-          <div>
+        <div className="flowwatch-guide-header mb-2">
+          <div className="flowwatch-guide-heading">
             <div className="text-sm font-semibold">Voice Guide</div>
             <div className="text-xs text-[var(--calcite-color-text-3)]">
               Current view: {pageTitle}
@@ -173,7 +173,7 @@ export function VoiceGuidePanel({
           </CalciteSelect>
         </CalciteLabel>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flowwatch-guide-actions">
           <CalciteButton
             scale="s"
             kind="brand"
@@ -223,14 +223,14 @@ export function VoiceGuidePanel({
         </div>
 
         <CalciteButton
-          className="mt-2"
+          className="flowwatch-control-help mt-2"
           scale="s"
           appearance={controlHelpMode ? 'solid' : 'outline'}
           kind={controlHelpMode ? 'brand' : 'neutral'}
           iconStart="information"
           onClick={onToggleControlHelp}
         >
-          {controlHelpMode ? 'Control help on' : 'Explain controls when selected'}
+          {controlHelpMode ? 'Control help on' : 'Explain controls'}
         </CalciteButton>
 
         <div className="flowwatch-narration-copy mt-2" aria-live="polite">

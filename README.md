@@ -26,7 +26,7 @@ npm run build
 
 ## Vercel deployment
 
-The repository includes `vercel.json` and a catch-all API function at `api/[...path].ts`. Vercel builds the Vite client into `dist` and serves the Express API through the function. Calcite and ArcGIS static assets are included with that function and routed through it.
+The repository includes `vercel.json` and a catch-all API function at `api/[...path].ts`. Vercel builds the Vite client into `dist` and serves the Express API through the function. The build copies Calcite and ArcGIS assets into `dist/calcite-assets` and `dist/arcgis-assets` so Vercel serves localization files, icons, and map resources as static assets.
 
 Import the repository into Vercel and use the detected project settings, or keep these settings:
 
