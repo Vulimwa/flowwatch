@@ -16,10 +16,33 @@ async function fetchJson<T>(url: string, signal?: AbortSignal, cacheKey?: string
     return responseCache.get(cacheKey) as T;
   }
   const resp = await fetch(url, { signal });
-  const body = (await resp.json().catch(() => ({}))) as { error?: string } & T;
-  if (!resp.ok) {
-    throw new Error(body.error || `GEOGLOWS service error (HTTP ${resp.status})`);
+  const responseText = await resp.text();
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(responseText);
+  } catch {
+    if (!resp.ok) {
+      throw new Error(`GEOGLOWS service error (HTTP ${resp.status})`);
+    }
+    throw new Error(`Expected a JSON response from ${url}.`);
   }
+
+  if (!resp.ok) {
+    const errorMessage =
+      parsed !== null &&
+      typeof parsed === 'object' &&
+      'error' in parsed &&
+      typeof parsed.error === 'string'
+        ? parsed.error
+        : null;
+    throw new Error(errorMessage || `GEOGLOWS service error (HTTP ${resp.status})`);
+  }
+
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error(`Expected a JSON object from ${url}.`);
+  }
+
+  const body = parsed as { error?: string } & T;
   if (cacheKey) {
     responseCache.set(cacheKey, body);
   }
@@ -35,11 +58,17 @@ export async function fetchTanaGeoglowsReachIndex(
   signal?: AbortSignal
 ): Promise<GeoglowsReachIndexResponse> {
   if (refresh) responseCache.delete('reach-index');
-  return fetchJson<GeoglowsReachIndexResponse>(
+  const cacheKey = refresh ? undefined : 'reach-index';
+  const index = await fetchJson<GeoglowsReachIndexResponse>(
     `/api/geoglows/reaches${refresh ? '?refresh=1' : ''}`,
     signal,
-    refresh ? undefined : 'reach-index'
+    cacheKey
   );
+  if (!Array.isArray(index.reaches) || !Array.isArray(index.tanaMatches)) {
+    if (cacheKey) responseCache.delete(cacheKey);
+    throw new Error('The GEOGLOWS reach-index response is missing its reach arrays.');
+  }
+  return index;
 }
 
 export async function identifyGeoglowsReachAtPoint(

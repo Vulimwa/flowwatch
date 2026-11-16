@@ -232,30 +232,30 @@ export function useFlowWatchState() {
 
   const reachByLinkno = useMemo(() => {
     const map = new Map<number, GeoglowsReachRecord>();
-    geoglowsIndex?.reaches.forEach((r) => map.set(r.linkno, r));
+    (geoglowsIndex?.reaches ?? []).forEach((r) => map.set(r.linkno, r));
     return map;
   }, [geoglowsIndex]);
 
   const tanaMatchByFid = useMemo(() => {
     const map = new Map<number, TanaReachMatch>();
-    geoglowsIndex?.tanaMatches.forEach((m) => map.set(m.tana_feature_id, m));
+    (geoglowsIndex?.tanaMatches ?? []).forEach((m) => map.set(m.tana_feature_id, m));
     return map;
   }, [geoglowsIndex]);
 
   // Automatically select verified mainstem Tana reach once index arrives if user hasn't picked one yet
   useEffect(() => {
+    const reaches = geoglowsIndex?.reaches ?? [];
     if (
-      geoglowsIndex &&
-      geoglowsIndex.reaches.some((reach) => reach.matchedFids.length > 0) &&
+      reaches.some((reach) => reach.matchedFids.length > 0) &&
       selectedLinkno === null &&
       !geoglowsUnverifiedMsg
     ) {
       const preferred =
-        geoglowsIndex.reaches.find(
+        reaches.find(
           (r) =>
             r.matchedLocalNames.some((n) => /tana/i.test(n)) &&
             r.matchedFids.length > 0
-        ) || geoglowsIndex.reaches.find((reach) => reach.matchedFids.length > 0);
+        ) || reaches.find((reach) => reach.matchedFids.length > 0);
       if (!preferred) return;
       setSelectedLinkno(preferred.linkno);
       if (preferred.matchedFids.length > 0) {
