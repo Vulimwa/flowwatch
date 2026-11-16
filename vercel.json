@@ -17,10 +17,7 @@
   ],
   "functions": {
     "api/[...path].ts": {
-      "includeFiles": [
-        "node_modules/@esri/calcite-components/dist/cdn/**",
-        "node_modules/@arcgis/core/assets/**"
-      ]
+      "includeFiles": "node_modules/{@esri/calcite-components/dist/cdn,@arcgis/core/assets}/**"
     }
   }
 }
