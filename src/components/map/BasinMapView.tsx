@@ -10,6 +10,7 @@ import FeatureLayer from '@arcgis/core/layers/FeatureLayer';
 import MapImageLayer from '@arcgis/core/layers/MapImageLayer';
 import MediaLayer from '@arcgis/core/layers/MediaLayer';
 import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer';
+import type Layer from '@arcgis/core/layers/Layer';
 import ElevationLayer from '@arcgis/core/layers/ElevationLayer';
 import BaseElevationLayer, { type FetchTileOptions } from '@arcgis/core/layers/BaseElevationLayer';
 import ImageElement from '@arcgis/core/layers/support/ImageElement';
@@ -344,7 +345,10 @@ export function BasinMapView({
     });
     geoglowsLayerRef.current = geoglowsLayer;
     geoglowsLoadInitiatedRef.current = false;
-    if (mapLayersEnabledRef.current) {
+    if (
+      mapLayersEnabledRef.current &&
+      layersStateRef.current.geoglows_forecast?.visible
+    ) {
       geoglowsLoadInitiatedRef.current = true;
       geoglowsLayer.load().catch((err: unknown) => {
         setGeoglowsLayerError(
@@ -379,7 +383,7 @@ export function BasinMapView({
       visible: layersStateRef.current.kenya_towns?.visible ?? false,
       opacity: layersStateRef.current.kenya_towns?.opacity ?? 0.95,
       minScale: 0,
-      outFields: ['OBJECTID', 'TOWN_NAME', 'TOWN_TYPE'],
+      outFields: ['FID', 'TOWN_NAME', 'TOWN_TYPE'],
       renderer: new SimpleRenderer({
         symbol: new SimpleMarkerSymbol({
           style: 'circle',
@@ -400,7 +404,7 @@ export function BasinMapView({
       visible: layersStateRef.current.kenya_health_facilities?.visible ?? false,
       opacity: layersStateRef.current.kenya_health_facilities?.opacity ?? 0.95,
       minScale: 0,
-      outFields: ['OBJECTID'],
+      outFields: ['FID'],
       renderer: new SimpleRenderer({
         symbol: new SimpleMarkerSymbol({
           style: 'square',
@@ -421,7 +425,7 @@ export function BasinMapView({
       visible: layersStateRef.current.kenya_primary_schools?.visible ?? false,
       opacity: layersStateRef.current.kenya_primary_schools?.opacity ?? 0.85,
       minScale: 1_200_000,
-      outFields: ['OBJECTID'],
+      outFields: ['ObjectId'],
       renderer: new SimpleRenderer({
         symbol: new SimpleMarkerSymbol({
           style: 'circle',
@@ -434,17 +438,19 @@ export function BasinMapView({
     });
     kenyaSchoolsLayerRef.current = schoolsLayer;
 
-    const initialLayers = mapLayersEnabledRef.current
-      ? [
-          subBasinLayer,
-          geoglowsLayer,
-          streamsLayer,
-          townsLayer,
-          healthLayer,
-          schoolsLayer,
-          highlightLayer,
-        ]
-      : [subBasinLayer, highlightLayer];
+    const initialOperationalLayers = [
+      { id: 'geoglows_forecast', layer: geoglowsLayer },
+      { id: 'tana_river_streams', layer: streamsLayer },
+      { id: 'kenya_towns', layer: townsLayer },
+      { id: 'kenya_health_facilities', layer: healthLayer },
+      { id: 'kenya_primary_schools', layer: schoolsLayer },
+    ]
+      .filter(
+        ({ id }) =>
+          mapLayersEnabledRef.current && Boolean(layersStateRef.current[id]?.visible)
+      )
+      .map(({ layer }) => layer);
+    const initialLayers = [subBasinLayer, ...initialOperationalLayers, highlightLayer];
 
     const map = new EsriMap({
       basemap: basemapIdRef.current,
@@ -979,7 +985,8 @@ export function BasinMapView({
       return;
     }
 
-    if (geoglowsLayer && !geoglowsLoadInitiatedRef.current) {
+    const geoglowsState = layersState['geoglows_forecast'];
+    if (geoglowsState?.visible && geoglowsLayer && !geoglowsLoadInitiatedRef.current) {
       geoglowsLoadInitiatedRef.current = true;
       geoglowsLayer.load().catch((err: unknown) => {
         setGeoglowsLayerError(
@@ -988,37 +995,49 @@ export function BasinMapView({
       });
     }
 
-    [geoglowsLayer, streamsLayer, schoolsLayer, healthLayer, townsLayer].forEach((layer) => {
-      if (layer && !map.layers.includes(layer)) {
-        map.add(layer);
-      }
-    });
+    const syncServiceLayer = (
+      layer: Layer | null,
+      visible: boolean,
+      opacity?: number
+    ) => {
+      if (!layer) return;
+      layer.visible = visible;
+      if (visible && !map.layers.includes(layer)) map.add(layer);
+      if (!visible && map.layers.includes(layer)) map.remove(layer);
+      if (opacity !== undefined) layer.opacity = opacity;
+    };
 
-    const geoglowsState = layersState['geoglows_forecast'];
     if (geoglowsLayer && geoglowsState) {
-      geoglowsLayer.visible = geoglowsState.visible;
-      geoglowsLayer.opacity = geoglowsState.opacity;
+      syncServiceLayer(geoglowsLayer, geoglowsState.visible, geoglowsState.opacity);
     }
 
     const streamsState = layersState['tana_river_streams'];
     if (streamsLayer && streamsState) {
-      streamsLayer.visible = streamsState.visible;
-      streamsLayer.opacity = streamsState.opacity;
+      syncServiceLayer(streamsLayer, streamsState.visible, streamsState.opacity);
     }
 
     if (townsLayer && layersState['kenya_towns']) {
-      townsLayer.visible = layersState['kenya_towns'].visible;
-      townsLayer.opacity = layersState['kenya_towns'].opacity;
+      syncServiceLayer(
+        townsLayer,
+        layersState['kenya_towns'].visible,
+        layersState['kenya_towns'].opacity
+      );
     }
 
     if (healthLayer && layersState['kenya_health_facilities']) {
-      healthLayer.visible = layersState['kenya_health_facilities'].visible;
-      healthLayer.opacity = layersState['kenya_health_facilities'].opacity;
+      syncServiceLayer(
+        healthLayer,
+        layersState['kenya_health_facilities'].visible,
+        layersState['kenya_health_facilities'].opacity
+      );
     }
 
     if (schoolsLayer && layersState['kenya_primary_schools']) {
-      schoolsLayer.visible = layersState['kenya_primary_schools'].visible;
-      schoolsLayer.opacity = layersState['kenya_primary_schools'].opacity;
+      syncServiceLayer(
+        schoolsLayer,
+        layersState['kenya_primary_schools'].visible,
+        layersState['kenya_primary_schools'].opacity
+      );
     }
 
     const orderedRasters = DATA_REGISTRY.filter(

@@ -35,6 +35,8 @@ interface LayerExplorerProps {
   mapLayersEnabled: boolean;
   onToggleMapLayersEnabled: (enabled: boolean) => void;
   onClearAllLayers: () => void;
+  onShowAllLayers: () => void;
+  onQueueAllLayers: () => void;
   geoglowsMapMeta?: GeoglowsMapServerMeta | null;
   geoglowsForecastTimeMs?: number | null;
   onChangeGeoglowsTimeMs?: (ms: number | null) => void;
@@ -52,6 +54,8 @@ export function LayerExplorer({
   mapLayersEnabled,
   onToggleMapLayersEnabled,
   onClearAllLayers,
+  onShowAllLayers,
+  onQueueAllLayers,
   geoglowsMapMeta,
   geoglowsForecastTimeMs,
   onChangeGeoglowsTimeMs,
@@ -92,6 +96,7 @@ export function LayerExplorer({
   }, [searchTerm, natureFilter]);
 
   const activeCount = DATA_REGISTRY.filter((d) => layersState[d.id]?.visible).length;
+  const inactiveLayerCount = DATA_REGISTRY.filter((ds) => !layersState[ds.id]?.visible).length;
 
   const renderDatasetItem = (ds: DatasetDefinition) => {
     const st = layersState[ds.id];
@@ -265,12 +270,12 @@ export function LayerExplorer({
         <div className="flex items-center justify-between gap-2">
           <div className="flex flex-col">
             <span className="text-xs font-semibold" style={{ color: 'var(--calcite-color-text-1)' }}>
-              Load Map Layers
+              Display Map Overlays
             </span>
             <span className="text-xs" style={{ color: 'var(--calcite-color-text-3)' }}>
               {mapLayersEnabled
-                ? 'Overlays render on 2D/3D canvas'
-                : 'Unloaded · Computations still active'}
+                ? 'Selected overlays render on the 2D/3D map'
+                : 'Selected overlays are queued; analysis continues'}
             </span>
           </div>
           <CalciteSwitch
@@ -293,11 +298,36 @@ export function LayerExplorer({
         </CalciteNotice>
       )}
 
+      <CalciteNotice open kind="info" scale="s" icon="lightbulb">
+        <div slot="message">
+          Use each layer switch to build a focused map. Turn display off to queue selected layers without drawing them.
+          Showing every layer can make the map busy.
+        </div>
+      </CalciteNotice>
+
       <div className="flex items-center justify-between gap-2">
         <CalciteChip scale="s" kind={mapLayersEnabled ? 'brand' : 'neutral'} appearance="outline-fill" icon="layers">
           {mapLayersEnabled ? `${activeCount} active` : `${activeCount} queued`}
         </CalciteChip>
-        <div className="flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center justify-end gap-1.5">
+          <CalciteButton
+            scale="s"
+            appearance="outline"
+            kind="neutral"
+            disabled={inactiveLayerCount === 0 && mapLayersEnabled}
+            onClick={onShowAllLayers}
+          >
+            Show All Layers
+          </CalciteButton>
+          <CalciteButton
+            scale="s"
+            appearance="outline"
+            kind="neutral"
+            disabled={inactiveLayerCount === 0 && !mapLayersEnabled}
+            onClick={onQueueAllLayers}
+          >
+            Queue All
+          </CalciteButton>
           <CalciteButton
             scale="s"
             appearance="outline"
@@ -307,9 +337,6 @@ export function LayerExplorer({
           >
             Clear All
           </CalciteButton>
-          <CalciteChip scale="s" kind="neutral" appearance="outline">
-            {counts.total} datasets
-          </CalciteChip>
         </div>
       </div>
 

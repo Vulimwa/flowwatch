@@ -400,22 +400,58 @@ export function useFlowWatchState() {
 
   const setLayerVisible = useCallback(
     (datasetId: string, visible: boolean) => {
+      const current = layersState[datasetId];
+      if (!current) return;
+      if (
+        mapLayersEnabled &&
+        visible &&
+        (!current.render || current.render.band !== current.band) &&
+        DATASET_BY_ID[datasetId]?.layerClass === 'MediaLayer-GeoTIFF'
+      ) {
+        void loadRaster(datasetId, current.band);
+      }
       setLayersState((prev) => {
         const cur = prev[datasetId];
         if (!cur) return prev;
-        if (
-          mapLayersEnabled &&
-          visible &&
-          (!cur.render || cur.render.band !== cur.band) &&
-          DATASET_BY_ID[datasetId]?.layerClass === 'MediaLayer-GeoTIFF'
-        ) {
-          void loadRaster(datasetId, cur.band);
-        }
         return { ...prev, [datasetId]: { ...cur, visible } };
       });
     },
-    [loadRaster, mapLayersEnabled]
+    [layersState, loadRaster, mapLayersEnabled]
   );
+
+  const showAllLayers = useCallback(() => {
+    const available = DATA_REGISTRY.filter((ds) => Boolean(layersState[ds.id]));
+    setMapLayersEnabledState(true);
+
+    setLayersState((prev) => {
+      const next = { ...prev };
+      available.forEach((ds) => {
+        next[ds.id] = { ...next[ds.id], visible: true };
+      });
+      return next;
+    });
+
+    available.forEach((ds) => {
+      const layer = layersState[ds.id];
+      if (
+        ds.layerClass === 'MediaLayer-GeoTIFF' &&
+        (!layer.render || layer.render.band !== layer.band)
+      ) {
+        void loadRaster(ds.id, layer.band);
+      }
+    });
+  }, [layersState, loadRaster]);
+
+  const queueAllLayers = useCallback(() => {
+    setMapLayersEnabledState(false);
+    setLayersState((prev) => {
+      const next = { ...prev };
+      DATA_REGISTRY.forEach((ds) => {
+        if (next[ds.id]) next[ds.id] = { ...next[ds.id], visible: true };
+      });
+      return next;
+    });
+  }, []);
 
   const clearAllLayers = useCallback(() => {
     setLayersState((prev) => {
@@ -667,6 +703,8 @@ export function useFlowWatchState() {
     tanaMatchByFid,
     layersState,
     setLayerVisible,
+    showAllLayers,
+    queueAllLayers,
     activateExclusiveModuleLayer,
     setLayerOpacity,
     setLayerBand,

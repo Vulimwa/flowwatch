@@ -886,6 +886,8 @@ export function AppShell() {
                 geoglowsForecastTimeMs={state.geoglowsForecastTimeMs}
                 onChangeGeoglowsTimeMs={state.setGeoglowsForecastTimeMs}
                 onToggleVisible={state.setLayerVisible}
+                onShowAllLayers={state.showAllLayers}
+                onQueueAllLayers={state.queueAllLayers}
                 onChangeOpacity={state.setLayerOpacity}
                 onChangeBand={state.setLayerBand}
                 onMoveOrder={state.moveLayerOrder}
