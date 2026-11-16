@@ -11,20 +11,55 @@ const clientCache = new Map<string, unknown>();
 async function fetchCached<T>(
   url: string,
   cacheKey?: string,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  validate?: (body: unknown) => body is T
 ): Promise<T> {
   if (cacheKey && clientCache.has(cacheKey)) {
     return clientCache.get(cacheKey) as T;
   }
   const resp = await fetch(url, { signal });
-  const body = (await resp.json().catch(() => ({}))) as { error?: string } & T;
+  let body: unknown;
+  try {
+    body = await resp.json();
+  } catch {
+    throw new Error(`Analytics service returned a non-JSON response for ${url} (HTTP ${resp.status}).`);
+  }
   if (!resp.ok) {
-    throw new Error(body.error || `Analytics service error (HTTP ${resp.status})`);
+    const message =
+      typeof body === 'object' &&
+      body !== null &&
+      'error' in body &&
+      typeof body.error === 'string'
+        ? body.error
+        : `Analytics service error (HTTP ${resp.status})`;
+    throw new Error(message);
+  }
+  if (validate && !validate(body)) {
+    throw new Error(`Analytics service returned invalid data for ${url}.`);
   }
   if (cacheKey) {
     clientCache.set(cacheKey, body);
   }
-  return body;
+  return body as T;
+}
+
+function isBasinZonalStatsResponse(body: unknown): body is BasinZonalStatsResponse {
+  return (
+    typeof body === 'object' &&
+    body !== null &&
+    'retrievedAt' in body &&
+    typeof body.retrievedAt === 'string' &&
+    'analysisWindow' in body &&
+    typeof body.analysisWindow === 'string' &&
+    'baselinePeriod' in body &&
+    typeof body.baselinePeriod === 'string' &&
+    'basinWide' in body &&
+    typeof body.basinWide === 'object' &&
+    body.basinWide !== null &&
+    'bySubBasin' in body &&
+    Array.isArray(body.bySubBasin) &&
+    body.bySubBasin.length === 5
+  );
 }
 
 export async function fetchTanaSubBasins(
@@ -47,7 +82,8 @@ export async function fetchBasinZonalStats(
   return fetchCached<BasinZonalStatsResponse>(
     `/api/basin/zonal-stats${refresh ? '?refresh=1' : ''}`,
     refresh ? undefined : 'zonal-stats',
-    signal
+    signal,
+    isBasinZonalStatsResponse
   );
 }
 

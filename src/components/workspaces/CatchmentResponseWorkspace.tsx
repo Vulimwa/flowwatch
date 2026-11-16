@@ -45,6 +45,7 @@ interface CatchmentResponseWorkspaceProps {
   onSelectHybasId: (id: number | 'all', zoom?: boolean) => void;
   zonalStats: BasinZonalStatsResponse | null;
   zonalLoading: boolean;
+  zonalStatsError: string | null;
   selectedReach: GeoglowsReachRecord | null;
   streamflowAnalysis: StreamflowAnalysisResult | null;
   onOpenIndicatorInfo: (indicatorId: string) => void;
@@ -97,6 +98,7 @@ export function CatchmentResponseWorkspace({
   onSelectHybasId,
   zonalStats,
   zonalLoading,
+  zonalStatsError,
   selectedReach,
   streamflowAnalysis,
   onOpenIndicatorInfo,
@@ -147,7 +149,9 @@ export function CatchmentResponseWorkspace({
     if (!zonalStats) return null;
     if (selectedHybasId === 'all') return zonalStats.basinWide;
     return (
-      zonalStats.bySubBasin.find((b) => b.hybasId === selectedHybasId) || zonalStats.basinWide
+      (Array.isArray(zonalStats.bySubBasin)
+        ? zonalStats.bySubBasin.find((b) => b.hybasId === selectedHybasId)
+        : null) || zonalStats.basinWide
     );
   }, [zonalStats, selectedHybasId]);
 
@@ -646,7 +650,7 @@ export function CatchmentResponseWorkspace({
         {/* TAB 3: SUB-BASIN COMPARISON TABLE (5 HYDROBASINS L7 POLYGONS) */}
         <CalciteTab selected={section === 'sub-basins'}>
           <div className="pt-2.5 flex flex-col gap-2.5">
-            {zonalStats ? (
+            {zonalStats && Array.isArray(zonalStats.bySubBasin) ? (
               <div className="overflow-x-auto">
                 <CalciteTable
                   caption="Upper Tana HydroBASINS Level-7 Polygon Zonal Comparison"
@@ -696,8 +700,15 @@ export function CatchmentResponseWorkspace({
                   ))}
                 </CalciteTable>
               </div>
-            ) : (
+            ) : zonalLoading ? (
               <CalciteLoader scale="s" label="Loading sub-basin zonal comparison" />
+            ) : (
+              <CalciteNotice open kind="warning" scale="s" icon="exclamation-mark-triangle">
+                <span slot="title">Sub-basin comparison unavailable</span>
+                <span>
+                  {zonalStatsError || 'The zonal statistics response did not contain valid sub-basin data.'}
+                </span>
+              </CalciteNotice>
             )}
 
             <CalciteButton

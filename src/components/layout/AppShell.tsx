@@ -668,6 +668,7 @@ export function AppShell() {
             onSelectHybasId={state.selectHybasId}
             zonalStats={state.zonalStats}
             zonalLoading={state.zonalLoading}
+            zonalStatsError={state.zonalStatsError}
             selectedReach={activeReach}
             streamflowAnalysis={state.streamflowAnalysis}
             onOpenIndicatorInfo={state.setActiveIndicatorId}

@@ -68,6 +68,7 @@ export function useFlowWatchState() {
   const [selectedHybasId, setSelectedHybasId] = useState<number | 'all'>('all');
   const [zonalStats, setZonalStats] = useState<BasinZonalStatsResponse | null>(null);
   const [zonalLoading, setZonalLoading] = useState<boolean>(true);
+  const [zonalStatsError, setZonalStatsError] = useState<string | null>(null);
   const [ensoStatus, setEnsoStatus] = useState<EnsoStatusResponse | null>(null);
   const [ensoLoading, setEnsoLoading] = useState<boolean>(true);
 
@@ -180,12 +181,19 @@ export function useFlowWatchState() {
     void loadSubBasins(false, controller.signal);
 
     setZonalLoading(true);
+    setZonalStatsError(null);
     fetchBasinZonalStats(false, controller.signal)
       .then((res) => {
         setZonalStats(res);
         setZonalLoading(false);
       })
-      .catch(() => setZonalLoading(false));
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return;
+        setZonalStatsError(
+          error instanceof Error ? error.message : 'Failed to load sub-basin zonal statistics.'
+        );
+        setZonalLoading(false);
+      });
 
     setEnsoLoading(true);
     fetchEnsoStatus(controller.signal)
@@ -645,6 +653,7 @@ export function useFlowWatchState() {
     selectHybasId,
     zonalStats,
     zonalLoading,
+    zonalStatsError,
     ensoStatus,
     ensoLoading,
     geoglowsMapMeta,
