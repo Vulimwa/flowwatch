@@ -1,8 +1,17 @@
-import { useEffect, useState, type ComponentProps } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ComponentProps,
+  type MouseEvent as ReactMouseEvent,
+} from 'react';
 import {
   CalciteAction,
   CalciteActionBar,
   CalciteActionGroup,
+  CalciteButton,
+  CalciteChip,
   CalciteIcon,
   CalcitePanel,
   CalciteShell,
@@ -10,7 +19,13 @@ import {
 } from '@esri/calcite-components-react';
 
 import { useFlowWatchState } from '../../hooks/useFlowWatchState';
+import { CATCHMENT_GUIDE, GUIDED_DEMO_STEPS, MODULE_GUIDE, TOOL_GUIDE } from '../../config/voiceGuide';
+import type { CatchmentGuideSection } from '../../config/voiceGuide';
+import { useVoiceGuide } from '../../hooks/useVoiceGuide';
 import type { AppModuleId, SupportingToolId } from '../../types/geospatial';
+import { GuidedDemoController, type GuidedDemoState } from '../../services/guidedDemoController';
+import { buildDownstreamRiverJourney, pointInSubBasin } from '../../utils/riverJourney';
+import { ILLUSTRATIVE_DAM_PRESETS } from '../../utils/damSimulator';
 import { DataQualityModule } from '../dashboards/DataQualityModule';
 import {
   IndicatorProvenanceDialog,
@@ -30,8 +45,51 @@ import { ImpactExposureWorkspace } from '../workspaces/ImpactExposureWorkspace';
 import { River3DExplorerWorkspace } from '../workspaces/River3DExplorerWorkspace';
 import { StreamflowWorkspace } from '../workspaces/StreamflowWorkspace';
 import { WaterOperationsWorkspace } from '../workspaces/WaterOperationsWorkspace';
+import { VoiceGuidePanel } from '../voice/VoiceGuidePanel';
 
 type CalciteIconName = NonNullable<ComponentProps<typeof CalciteAction>['icon']>;
+
+const EMPTY_DEMO_STATE: GuidedDemoState = {
+  running: false,
+  paused: false,
+  completed: false,
+  actionPending: false,
+  index: 0,
+  notice: null,
+  narration: '',
+};
+
+const WELCOME_DISMISSED_KEY = 'flowwatch-guide-welcome-dismissed-v1';
+
+function readWelcomePreference(): boolean {
+  try {
+    return window.localStorage.getItem(WELCOME_DISMISSED_KEY) !== 'true';
+  } catch (error) {
+    console.warn('Unable to read the Voice Guide welcome preference.', error);
+    return true;
+  }
+}
+
+function persistWelcomeDismissed(): void {
+  try {
+    window.localStorage.setItem(WELCOME_DISMISSED_KEY, 'true');
+  } catch (error) {
+    console.warn('Unable to save the Voice Guide welcome preference.', error);
+  }
+}
+
+async function waitForCondition(
+  condition: () => boolean,
+  timeoutMs: number,
+  intervalMs = 200
+): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (condition()) return true;
+    await new Promise<void>((resolve) => window.setTimeout(resolve, intervalMs));
+  }
+  return condition();
+}
 
 const WORKSPACES: Array<{
   id: AppModuleId;
@@ -50,6 +108,63 @@ const WORKSPACES: Array<{
 export function AppShell() {
   const state = useFlowWatchState();
   const [leftTab, setLeftTab] = useState<'workspace' | SupportingToolId>('workspace');
+  const [catchmentSection, setCatchmentSection] = useState<CatchmentGuideSection>('rainfall');
+  const [demoLayerRequest, setDemoLayerRequest] = useState<{
+    section: 'rainfall' | 'soil-pet';
+    layerId: string;
+    nonce: number;
+  } | null>(null);
+  const [demoPresetRequest, setDemoPresetRequest] = useState<{ id: string; nonce: number } | null>(
+    null
+  );
+  const [demoFollowNonce, setDemoFollowNonce] = useState(0);
+  const [demoState, setDemoState] = useState<GuidedDemoState>(EMPTY_DEMO_STATE);
+  const [welcomeOpen, setWelcomeOpen] = useState(readWelcomePreference);
+  const [controlHelpMode, setControlHelpMode] = useState(false);
+  const voice = useVoiceGuide();
+  const stateRef = useRef(state);
+  stateRef.current = state;
+  const voiceRef = useRef(voice);
+  voiceRef.current = voice;
+  const leftTabRef = useRef(leftTab);
+  leftTabRef.current = leftTab;
+  const catchmentSectionRef = useRef(catchmentSection);
+  catchmentSectionRef.current = catchmentSection;
+  const mapReadyRef = useRef(false);
+  const demoLayerNonceRef = useRef(0);
+  const demoPresetNonceRef = useRef(0);
+  const demoSnapshotRef = useRef<{
+    activeModule: AppModuleId;
+    leftTab: 'workspace' | SupportingToolId;
+    rightTab: typeof state.rightTab;
+    rightPanelOpen: boolean;
+    mapMode: '2d' | '3d';
+    basemapId: string;
+    selectedHybasId: number | 'all';
+    selectedLinkno: number | null;
+    visibleLayers: Record<string, boolean>;
+    catchmentSection: CatchmentGuideSection;
+    riverJourneyTarget: typeof state.riverJourneyTarget;
+    riverProfileMarker: typeof state.riverProfileMarker;
+  } | null>(null);
+  const suppressPageNarrationRef = useRef(false);
+  const lastNarratedContextRef = useRef<string | null>(null);
+  const demoControllerRef = useRef<GuidedDemoController | null>(null);
+  const demoActionsRef = useRef<{
+    onStart: () => void;
+    onStop: () => void;
+    onComplete: () => void;
+    onStep: (stepIndex: number) => Promise<{ narration?: string; notice?: string } | void>;
+  }>({
+    onStart: () => undefined,
+    onStop: () => undefined,
+    onComplete: () => undefined,
+    onStep: async () => undefined,
+  });
+
+  const handleMapReadyChange = useCallback((ready: boolean) => {
+    mapReadyRef.current = ready;
+  }, []);
 
   // Sync Calcite light/dark mode class and ArcGIS theme CSS so all tokens & widgets match seamlessly
   useEffect(() => {
@@ -64,14 +179,32 @@ export function AppShell() {
     }
   }, [state.darkTheme]);
 
+  useEffect(() => {
+    if (welcomeOpen) {
+      state.setRightTab('guide');
+      state.setRightPanelOpen(true);
+    }
+  }, [state.setRightPanelOpen, state.setRightTab, welcomeOpen]);
+
   const activeWorkspaceInfo =
     WORKSPACES.find((m) => m.id === state.activeModule) || WORKSPACES[0];
 
   const handleSelectWorkspace = (id: AppModuleId) => {
     state.setActiveModule(id);
     if (id === 'river_3d_explorer') state.setMapMode('3d');
+    if (id === 'catchment_response') setCatchmentSection('rainfall');
     setLeftTab('workspace');
     state.setLeftPanelOpen(true);
+  };
+
+  const openGuidePanel = () => {
+    state.setRightTab('guide');
+    state.setRightPanelOpen(true);
+  };
+
+  const dismissWelcome = () => {
+    setWelcomeOpen(false);
+    persistWelcomeDismissed();
   };
 
   const handleOpenSupportingTool = (tool: SupportingToolId) => {
@@ -95,6 +228,361 @@ export function AppShell() {
         : state.zonalStats.bySubBasin.find((b) => b.hybasId === state.selectedHybasId) ||
           state.zonalStats.basinWide
       : null;
+
+  const currentGuideContext =
+    leftTab === 'workspace'
+      ? state.activeModule === 'catchment_response'
+        ? CATCHMENT_GUIDE[catchmentSection]
+        : MODULE_GUIDE[state.activeModule]
+      : TOOL_GUIDE[leftTab];
+  const visibleLayerNames = state.visibleDatasets
+    .slice(0, 4)
+    .map((dataset) => dataset.shortTitle);
+  const currentPageNarration = [
+    currentGuideContext.narration,
+    activeReach
+      ? `The selected verified GEOGLOWS reach is ${activeReach.displayName}, LINKNO ${activeReach.linkno}.`
+      : state.selectedLinkno !== null
+        ? `GEOGLOWS LINKNO ${state.selectedLinkno} is selected, but the current local verified reach record is not available.`
+        : '',
+    state.selectedHybasId === 'all'
+      ? ''
+      : `The selected study-area sub-basin is ${
+          state.subBasins.find((basin) => basin.hybasId === state.selectedHybasId)?.name ??
+          `HydroBASINS ${state.selectedHybasId}`
+        }.`,
+    `The shared map is currently in ${state.mapMode === '3d' ? 'three-dimensional SceneView' : 'two-dimensional MapView'} mode.`,
+    visibleLayerNames.length > 0
+      ? `Visible map layers include ${visibleLayerNames.join(', ')}${
+          state.visibleDatasets.length > visibleLayerNames.length
+            ? `, and ${state.visibleDatasets.length - visibleLayerNames.length} more`
+            : ''
+        }.`
+      : 'No thematic map layer is currently visible.',
+  ]
+    .filter(Boolean)
+    .join(' ');
+  const pageContextKey = [
+    state.activeModule,
+    leftTab,
+    catchmentSection,
+    state.mapMode,
+    state.selectedLinkno ?? '',
+    state.selectedHybasId,
+  ].join(':');
+
+  useEffect(() => {
+    voice.setNarrationText(currentPageNarration);
+  }, [currentPageNarration, voice.setNarrationText]);
+
+  useEffect(() => {
+    if (suppressPageNarrationRef.current) {
+      suppressPageNarrationRef.current = false;
+      lastNarratedContextRef.current = pageContextKey;
+      return;
+    }
+    if (lastNarratedContextRef.current === pageContextKey) return;
+    lastNarratedContextRef.current = pageContextKey;
+    if (!demoState.running && voice.enabled && voice.userActivated) {
+      voice.speak(currentPageNarration);
+    }
+  }, [
+    currentPageNarration,
+    demoState.running,
+    pageContextKey,
+    voice.enabled,
+    voice.speak,
+    voice.userActivated,
+  ]);
+
+  const demoActions = {
+    onStart: () => {
+      const current = stateRef.current;
+      demoSnapshotRef.current = {
+        activeModule: current.activeModule,
+        leftTab: leftTabRef.current,
+        rightTab: current.rightTab,
+        rightPanelOpen: current.rightPanelOpen,
+        mapMode: current.mapMode,
+        basemapId: current.basemapId,
+        selectedHybasId: current.selectedHybasId,
+        selectedLinkno: current.selectedLinkno,
+        visibleLayers: Object.fromEntries(
+          Object.entries(current.layersState).map(([id, layer]) => [id, layer.visible])
+        ),
+        catchmentSection: catchmentSectionRef.current,
+        riverJourneyTarget: current.riverJourneyTarget,
+        riverProfileMarker: current.riverProfileMarker,
+      };
+      setWelcomeOpen(false);
+      persistWelcomeDismissed();
+      current.setRightTab('guide');
+      current.setRightPanelOpen(true);
+    },
+    onStop: () => {
+      const snapshot = demoSnapshotRef.current;
+      if (!snapshot) return;
+      const current = stateRef.current;
+      suppressPageNarrationRef.current = true;
+      current.setActiveModule(snapshot.activeModule);
+      current.setBasemapId(snapshot.basemapId);
+      current.setMapMode(snapshot.mapMode);
+      current.resetHomeExtent();
+      current.selectHybasId(snapshot.selectedHybasId, false);
+      current.selectGeoglowsReach(snapshot.selectedLinkno, false);
+      current.setRiverJourneyTarget(snapshot.riverJourneyTarget);
+      current.setRiverProfileMarker(snapshot.riverProfileMarker);
+      Object.entries(snapshot.visibleLayers).forEach(([id, visible]) => {
+        current.setLayerVisible(id, visible);
+      });
+      setLeftTab(snapshot.leftTab);
+      setCatchmentSection(snapshot.catchmentSection);
+      setDemoLayerRequest(null);
+      setDemoPresetRequest(null);
+      current.setRightTab(snapshot.rightTab);
+      current.setRightPanelOpen(snapshot.rightPanelOpen);
+      demoSnapshotRef.current = null;
+    },
+    onComplete: () => {
+      const current = stateRef.current;
+      suppressPageNarrationRef.current = true;
+      demoSnapshotRef.current = null;
+      current.setActiveModule('basin_situation');
+      current.setMapMode('2d');
+      current.resetHomeExtent();
+      setLeftTab('workspace');
+      setCatchmentSection('rainfall');
+      setDemoLayerRequest(null);
+      setDemoPresetRequest(null);
+      current.setLeftPanelOpen(true);
+      current.setRightTab('guide');
+      current.setRightPanelOpen(true);
+    },
+    onStep: async (stepIndex: number) => {
+      const step = GUIDED_DEMO_STEPS[stepIndex];
+      const current = stateRef.current;
+      handleSelectWorkspace(step.module);
+      await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
+
+      if (step.id === 'basin-question') {
+        const mapReady = await waitForCondition(() => mapReadyRef.current, 12_000);
+        return mapReady
+          ? undefined
+          : { notice: 'The map is still initializing. The overview remains available, and the text guide continues.' };
+      }
+
+      if (step.id === 'rainfall-signal' || step.id === 'soil-and-demand') {
+        const section = step.id === 'rainfall-signal' ? 'rainfall' : 'soil-pet';
+        const layerId =
+          step.id === 'rainfall-signal' ? 'chirps_anomaly_2026' : 'era5_sm_anomaly_2026';
+        setCatchmentSection(section);
+        setDemoLayerRequest({ section, layerId, nonce: ++demoLayerNonceRef.current });
+        const loaded = await waitForCondition(() => {
+          const layer = stateRef.current.layersState[layerId];
+          return layer?.status === 'ready' || layer?.status === 'error';
+        }, 10_000);
+        const layer = stateRef.current.layersState[layerId];
+        if (!loaded || layer?.status !== 'ready') {
+          return {
+            notice: layer?.error
+              ? `The ${layerId} layer reported an error: ${layer.error}`
+              : `The ${layerId} layer did not report ready within 10 seconds. Check its map status; the chapter will continue with the text explanation.`,
+          };
+        }
+        return undefined;
+      }
+
+      if (step.id === 'river-signal') {
+        const app = stateRef.current;
+        const reach =
+          (app.selectedLinkno !== null && app.reachByLinkno.get(app.selectedLinkno)) ||
+          app.geoglowsIndex?.reaches.find((candidate) => candidate.matchedFids.length > 0) ||
+          null;
+        if (reach && reach.linkno !== app.selectedLinkno) {
+          app.selectGeoglowsReach(reach.linkno, true);
+        }
+        const responseReady = await waitForCondition(
+          () => Boolean(stateRef.current.streamflowAnalysis),
+          7_000
+        );
+        return {
+          narration: reach
+            ? `${step.narration} The selected local match is ${reach.displayName}, LINKNO ${reach.linkno}.`
+            : step.narration,
+          notice: !reach
+            ? 'No locally verified GEOGLOWS reach is available for this chapter.'
+            : responseReady
+              ? undefined
+              : 'No streamflow analysis response was ready within 7 seconds. The forecast workspace displays the service loading or error status; continue without inferring missing values.',
+        };
+      }
+
+      if (step.id === 'terrain-and-network') {
+        const app = stateRef.current;
+        app.setMapMode('3d');
+        app.selectHybasId('all', false);
+        app.setRiverJourneyTarget(null);
+        app.setRiverProfileMarker(null);
+        const infrastructureReady = await waitForCondition(
+          () =>
+            !stateRef.current.geoglowsIndexLoading &&
+            !stateRef.current.subBasinsLoading,
+          10_000
+        );
+        const latest = stateRef.current;
+        const studyAreaReaches =
+          latest.geoglowsIndex && latest.subBasins.length > 0
+            ? latest.geoglowsIndex.reaches.filter((reach) =>
+                latest.subBasins.some((basin) =>
+                  pointInSubBasin(reach.centroid[0], reach.centroid[1], basin)
+                )
+              )
+            : [];
+        const verifiedStarts = studyAreaReaches
+          .filter((reach) => reach.matchedFids.length > 0)
+          .sort((a, b) => a.upstreamAreaKm2 - b.upstreamAreaKm2);
+        const connectedStart = verifiedStarts.find(
+          (reach) =>
+            buildDownstreamRiverJourney(reach.linkno, studyAreaReaches)
+              .downstreamDirectionVerified
+        );
+        const selectedStart = connectedStart ?? verifiedStarts[0] ?? null;
+        if (selectedStart) {
+          latest.selectGeoglowsReach(selectedStart.linkno, true);
+          if (connectedStart) setDemoFollowNonce((nonce) => nonce + 1);
+        }
+        const mapReady = await waitForCondition(() => mapReadyRef.current, 12_000);
+        const notice = !infrastructureReady
+          ? 'The local river index or sub-basin service did not finish loading within 10 seconds.'
+          : !selectedStart
+            ? 'No locally verified river reach is available in the study-area polygons.'
+            : !connectedStart
+              ? 'No unambiguous downstream geometry connection was verified for the available local reaches. The explorer will show the reach profile without claiming a continuous route.'
+              : !mapReady
+                ? 'The 3D scene is still initializing; the chapter continues with its text explanation.'
+                : undefined;
+        return {
+          narration: selectedStart
+            ? `${step.narration} The selected local reach is ${selectedStart.displayName}, LINKNO ${selectedStart.linkno}.`
+            : step.narration,
+          notice,
+        };
+      }
+
+      if (step.id === 'exposure-screen') {
+        const app = stateRef.current;
+        app.setLayerVisible('population_2025', true);
+        app.setLayerVisible('builtup_2020', true);
+        app.setLayerVisible('hand', true);
+        if (app.selectedLinkno === null) {
+          return { notice: 'A locally verified river reach is required for the corridor screening; no reach is currently selected.' };
+        }
+        const screeningReady = await waitForCondition(() => {
+          const latest = stateRef.current;
+          return Boolean(
+            latest.exposureError ||
+              (latest.exposureScreening?.linkno === latest.selectedLinkno &&
+                latest.exposureScreening.bufferMeters === latest.exposureBufferMeters)
+          );
+        }, 8_000);
+        return screeningReady
+          ? stateRef.current.exposureError
+            ? { notice: `Exposure screening reported an error: ${stateRef.current.exposureError}` }
+            : undefined
+          : {
+              notice: 'Exposure screening did not return a result within 8 seconds. The workspace remains available and will show its current loading or error status.',
+            };
+      }
+
+      if (step.id === 'operations-scenario') {
+        const preset = ILLUSTRATIVE_DAM_PRESETS.find(
+          (candidate) => candidate.id === 'dry-spell-conservation'
+        );
+        setDemoPresetRequest({
+          id: preset?.id ?? 'dry-spell-conservation',
+          nonce: ++demoPresetNonceRef.current,
+        });
+        return {
+          narration: preset
+            ? `${step.narration} The selected illustrative preset is ${preset.label}.`
+            : step.narration,
+        };
+      }
+
+      return undefined;
+    },
+  };
+  demoActionsRef.current = demoActions;
+
+  if (!demoControllerRef.current) {
+    demoControllerRef.current = new GuidedDemoController({
+      onStateChange: setDemoState,
+      onStart: () => demoActionsRef.current.onStart(),
+      onStop: () => demoActionsRef.current.onStop(),
+      onComplete: () => demoActionsRef.current.onComplete(),
+      onStep: async (_step, index) => demoActionsRef.current.onStep(index),
+      speak: (text) => voiceRef.current.speak(text),
+      isSpeechActive: () =>
+        voiceRef.current.status === 'speaking' || voiceRef.current.status === 'paused',
+      isSpeechPaused: () => voiceRef.current.status === 'paused',
+      cancelSpeech: () => voiceRef.current.cancel(),
+      pauseSpeech: () => voiceRef.current.pause(),
+      resumeSpeech: () => voiceRef.current.resume(),
+    });
+  }
+
+  useEffect(
+    () => () => {
+      demoControllerRef.current?.dispose();
+    },
+    []
+  );
+
+  const visibilityPausedDemoRef = useRef(false);
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      const controller = demoControllerRef.current;
+      if (
+        document.visibilityState === 'hidden' &&
+        controller?.getState().running &&
+        !controller.getState().paused
+      ) {
+        visibilityPausedDemoRef.current = true;
+        controller.pause();
+      } else if (
+        document.visibilityState === 'visible' &&
+        visibilityPausedDemoRef.current
+      ) {
+        visibilityPausedDemoRef.current = false;
+        controller?.resume();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
+
+  const handleStartDemo = () => {
+    voice.activate();
+    openGuidePanel();
+    demoControllerRef.current?.start();
+  };
+
+  const handleExplainPage = () => {
+    voice.activate();
+    voice.speak(currentPageNarration);
+  };
+
+  const handleExplainControlClick = (event: ReactMouseEvent<HTMLElement>) => {
+    if (!controlHelpMode || !voice.enabled || demoState.running) return;
+    const hintedControl = event.nativeEvent
+      .composedPath()
+      .find(
+        (element): element is HTMLElement =>
+          element instanceof HTMLElement && Boolean(element.dataset.voiceHint)
+      );
+    const hint = hintedControl?.dataset.voiceHint;
+    if (hint) voice.speak(hint);
+  };
 
   const leftPanelHeading =
     leftTab === 'layers'
@@ -142,6 +630,7 @@ export function AppShell() {
               state.setLeftPanelOpen(true);
             }}
             onOpenIndicatorInfo={state.setActiveIndicatorId}
+            onStartGuidedDemo={handleStartDemo}
           />
         );
       case 'streamflow':
@@ -185,6 +674,9 @@ export function AppShell() {
             streamflowAnalysis={state.streamflowAnalysis}
             onOpenIndicatorInfo={state.setActiveIndicatorId}
             onNavigateWorkspace={handleSelectWorkspace}
+            section={catchmentSection}
+            onSectionChange={setCatchmentSection}
+            demoLayerRequest={demoLayerRequest}
           />
         );
       case 'impact_exposure':
@@ -216,6 +708,7 @@ export function AppShell() {
             selectedLinkno={state.selectedLinkno}
             onScenarioResultChange={state.setDamResult}
             onOpenIndicatorInfo={state.setActiveIndicatorId}
+            demoPresetRequest={demoPresetRequest}
           />
         );
       case 'river_3d_explorer':
@@ -240,6 +733,9 @@ export function AppShell() {
             geoglowsForecastTimeMs={state.geoglowsForecastTimeMs}
             onChangeGeoglowsTimeMs={state.setGeoglowsForecastTimeMs}
             onNavigateWorkspace={handleSelectWorkspace}
+            demoFollowNonce={demoFollowNonce}
+            demoRunning={demoState.running}
+            demoPaused={demoState.paused}
           />
         );
       default:
@@ -248,12 +744,43 @@ export function AppShell() {
   };
 
   return (
-    <CalciteShell className="flowwatch-shell" contentBehind={false}>
+    <CalciteShell
+      className="flowwatch-shell"
+      contentBehind={false}
+      data-demo-focus={
+        demoState.running ? GUIDED_DEMO_STEPS[demoState.index]?.focus : undefined
+      }
+      onClickCapture={handleExplainControlClick}
+    >
       <header slot="header" className="flowwatch-brandbar">
         <CalciteIcon icon="water-drop" scale="m" aria-hidden="true" />
         <div className="flowwatch-brand-copy">
           <strong>FlowWatch Africa</strong>
           <span>Upper Tana River Basin</span>
+        </div>
+        <div className="flowwatch-brand-actions">
+          {demoState.running && (
+            <CalciteChip scale="s" kind="brand" icon="play">
+              {demoState.paused ? 'Demo paused' : 'Guided demo'}
+            </CalciteChip>
+          )}
+          <CalciteButton
+            scale="s"
+            appearance="outline"
+            iconStart="speech-bubble"
+            onClick={openGuidePanel}
+          >
+            Voice Guide
+          </CalciteButton>
+          <CalciteButton
+            scale="s"
+            kind="brand"
+            iconStart="play"
+            disabled={demoState.running}
+            onClick={handleStartDemo}
+          >
+            {demoState.completed ? 'Replay Demo' : 'Guided Demo'}
+          </CalciteButton>
         </div>
       </header>
 
@@ -280,12 +807,13 @@ export function AppShell() {
           layout="vertical"
           scale="m"
         >
-          <CalciteActionGroup>
+          <CalciteActionGroup data-demo-target="workspace-navigation">
             {WORKSPACES.map((m) => (
               <CalciteAction
                 key={m.id}
                 text={m.label}
                 icon={m.icon}
+                data-voice-hint={`Open the ${m.shortLabel} workspace to inspect its data and analysis controls.`}
                 active={
                   state.leftPanelOpen && leftTab === 'workspace' && state.activeModule === m.id
                 }
@@ -308,18 +836,21 @@ export function AppShell() {
             <CalciteAction
               text="Layers"
               icon="layers"
+              data-voice-hint="Open the layer explorer to turn map datasets on or off and inspect their loading status."
               active={state.leftPanelOpen && leftTab === 'layers'}
               onClick={() => handleOpenSupportingTool('layers')}
             />
             <CalciteAction
               text="Registry"
               icon="table"
+              data-voice-hint="Open the data quality registry to review sources, dates, units and limitations."
               active={state.leftPanelOpen && leftTab === 'registry'}
               onClick={() => handleOpenSupportingTool('registry')}
             />
             <CalciteAction
               text="Indicators"
               icon="book"
+              data-voice-hint="Open the indicator registry to review definitions, assumptions and scientific caveats."
               active={state.leftPanelOpen && leftTab === 'indicators'}
               onClick={() => handleOpenSupportingTool('indicators')}
             />
@@ -415,6 +946,7 @@ export function AppShell() {
             state.setRightTab('identify');
             state.setRightPanelOpen(true);
           }}
+          onMapReadyChange={handleMapReadyChange}
         />
       </main>
 
@@ -475,6 +1007,12 @@ export function AppShell() {
                 }
               }}
             />
+            <CalciteAction
+              text="Voice Guide & Demo"
+              icon="speech-bubble"
+              active={state.rightPanelOpen && state.rightTab === 'guide'}
+              onClick={openGuidePanel}
+            />
           </CalciteActionGroup>
         </CalciteActionBar>
 
@@ -484,7 +1022,9 @@ export function AppShell() {
               ? 'Active Map Legends'
               : state.rightTab === 'identify'
               ? 'Map Pixel & Stream Identify'
-              : 'Active Layer Provenance'
+              : state.rightTab === 'transparency'
+                ? 'Active Layer Provenance'
+                : 'Voice Guide & Guided Demo'
           }
           closable
           onCalcitePanelClose={() => state.setRightPanelOpen(false)}
@@ -519,6 +1059,46 @@ export function AppShell() {
                 onOpenRegistryModule={() => {
                   setLeftTab('registry');
                   state.setLeftPanelOpen(true);
+                }}
+              />
+            )}
+            {state.rightTab === 'guide' && (
+              <VoiceGuidePanel
+                voice={voice}
+                pageTitle={currentGuideContext.title}
+                pageNarration={currentPageNarration}
+                welcomeOpen={welcomeOpen}
+                onDismissWelcome={() => {
+                  dismissWelcome();
+                  state.setRightPanelOpen(false);
+                }}
+                onStartDemo={handleStartDemo}
+                onExplainPage={handleExplainPage}
+                onPauseSpeech={() => {
+                  if (demoState.running) demoControllerRef.current?.pause();
+                  else voice.pause();
+                }}
+                onResumeSpeech={() => {
+                  if (demoState.running) demoControllerRef.current?.resume();
+                  else voice.resume();
+                }}
+                controlHelpMode={controlHelpMode}
+                onToggleControlHelp={() => setControlHelpMode((enabled) => !enabled)}
+                demoState={demoState}
+                onPauseDemo={() => demoControllerRef.current?.pause()}
+                onResumeDemo={() => demoControllerRef.current?.resume()}
+                onPreviousDemoStep={() => demoControllerRef.current?.previous()}
+                onNextDemoStep={() => demoControllerRef.current?.next()}
+                onRestartDemo={() => demoControllerRef.current?.restart()}
+                onStopDemo={() => demoControllerRef.current?.stop()}
+                onReplayDemo={() => {
+                  demoControllerRef.current?.dismissCompleted();
+                  handleStartDemo();
+                }}
+                onExploreIndependently={() => {
+                  dismissWelcome();
+                  demoControllerRef.current?.dismissCompleted();
+                  state.setRightPanelOpen(false);
                 }}
               />
             )}

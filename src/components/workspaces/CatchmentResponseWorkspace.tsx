@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   CalciteBlock,
   CalciteButton,
@@ -24,6 +24,7 @@ import {
 
 import { evaluateCatchmentSignalConsistency } from '../../analytics/catchmentConsistency';
 import { DATASET_BY_ID } from '../../config/dataRegistry';
+import type { CatchmentGuideSection } from '../../config/voiceGuide';
 import type { LayerRuntimeState } from '../../hooks/useFlowWatchState';
 import { fetchGeoTiffTimeSeries } from '../../services/raster/rasterService';
 import type {
@@ -48,6 +49,13 @@ interface CatchmentResponseWorkspaceProps {
   streamflowAnalysis: StreamflowAnalysisResult | null;
   onOpenIndicatorInfo: (indicatorId: string) => void;
   onNavigateWorkspace: (id: AppModuleId) => void;
+  section: CatchmentGuideSection;
+  onSectionChange: (section: CatchmentGuideSection) => void;
+  demoLayerRequest: {
+    section: 'rainfall' | 'soil-pet';
+    layerId: string;
+    nonce: number;
+  } | null;
 }
 
 const CLIMATE_DATASET_IDS = [
@@ -93,6 +101,9 @@ export function CatchmentResponseWorkspace({
   streamflowAnalysis,
   onOpenIndicatorInfo,
   onNavigateWorkspace,
+  section,
+  onSectionChange,
+  demoLayerRequest,
 }: CatchmentResponseWorkspaceProps) {
   const [climateId, setClimateId] = useState<string>('chirps_anomaly_2026');
   const [soilId, setSoilId] = useState<string>('era5_sm_anomaly_2026');
@@ -103,6 +114,15 @@ export function CatchmentResponseWorkspace({
   const [recentSm, setRecentSm] = useState<RasterTimeSeriesResult | null>(null);
   const [baseSm, setBaseSm] = useState<RasterTimeSeriesResult | null>(null);
   const [loadingExtra, setLoadingExtra] = useState(true);
+  const handledDemoLayerNonce = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!demoLayerRequest || handledDemoLayerNonce.current === demoLayerRequest.nonce) return;
+    handledDemoLayerNonce.current = demoLayerRequest.nonce;
+    if (demoLayerRequest.section === 'rainfall') setClimateId(demoLayerRequest.layerId);
+    if (demoLayerRequest.section === 'soil-pet') setSoilId(demoLayerRequest.layerId);
+    onActivateLayer(demoLayerRequest.layerId);
+  }, [demoLayerRequest, onActivateLayer]);
 
   useEffect(() => {
     let cancelled = false;
@@ -272,16 +292,36 @@ export function CatchmentResponseWorkspace({
         </div>
       </CalciteBlock>
 
-      <CalciteTabs scale="s" layout="center">
+      <CalciteTabs scale="s" layout="center" data-demo-target="catchment-tabs">
         <CalciteTabNav slot="tab-nav">
-          <CalciteTabTitle selected>Rainfall</CalciteTabTitle>
-          <CalciteTabTitle>Soil &amp; PET</CalciteTabTitle>
-          <CalciteTabTitle>Sub-Basins</CalciteTabTitle>
-          <CalciteTabTitle>Terrain Routing</CalciteTabTitle>
+          <CalciteTabTitle
+            selected={section === 'rainfall'}
+            onClick={() => onSectionChange('rainfall')}
+          >
+            Rainfall
+          </CalciteTabTitle>
+          <CalciteTabTitle
+            selected={section === 'soil-pet'}
+            onClick={() => onSectionChange('soil-pet')}
+          >
+            Soil &amp; PET
+          </CalciteTabTitle>
+          <CalciteTabTitle
+            selected={section === 'sub-basins'}
+            onClick={() => onSectionChange('sub-basins')}
+          >
+            Sub-Basins
+          </CalciteTabTitle>
+          <CalciteTabTitle
+            selected={section === 'terrain-routing'}
+            onClick={() => onSectionChange('terrain-routing')}
+          >
+            Terrain Routing
+          </CalciteTabTitle>
         </CalciteTabNav>
 
         {/* TAB 1: CHIRPS RAINFALL & PARTIAL-YEAR SAFEGUARD */}
-        <CalciteTab selected>
+        <CalciteTab selected={section === 'rainfall'}>
           <div className="pt-2.5 flex flex-col gap-2.5">
             <CalciteNotice open kind="warning" scale="s" icon="clock">
               <div slot="title">Incomplete 2026 Record (Jan–Sep Only)</div>
@@ -297,6 +337,8 @@ export function CatchmentResponseWorkspace({
                   scale="s"
                   label="Select CHIRPS layer"
                   value={climateId}
+                  data-demo-target="rainfall-layer"
+                  data-voice-hint="Choose the CHIRPS rainfall product to display on the map. The current comparison uses January through September 2026 against the matching 2001 to 2025 months."
                   onCalciteSelectChange={(e) => {
                     const id = String((e.target as HTMLCalciteSelectElement).value);
                     setClimateId(id);
@@ -493,7 +535,7 @@ export function CatchmentResponseWorkspace({
         </CalciteTab>
 
         {/* TAB 2: SOIL MOISTURE & PET ATMOSPHERIC DEMAND */}
-        <CalciteTab>
+        <CalciteTab selected={section === 'soil-pet'}>
           <div className="pt-2.5 flex flex-col gap-2.5">
             <CalciteNotice open kind="info" scale="s" icon="information">
               <div slot="title">ERA5-Land Soil Moisture &amp; PET Guardrails</div>
@@ -508,6 +550,8 @@ export function CatchmentResponseWorkspace({
                 scale="s"
                 label="Select ERA5 layer"
                 value={soilId}
+                data-demo-target="soil-pet-layer"
+                data-voice-hint="Choose an ERA5-Land soil moisture or potential evapotranspiration product. Check its time period, units, and status before interpreting it."
                 onCalciteSelectChange={(e) => {
                   const id = String((e.target as HTMLCalciteSelectElement).value);
                   setSoilId(id);
@@ -600,7 +644,7 @@ export function CatchmentResponseWorkspace({
         </CalciteTab>
 
         {/* TAB 3: SUB-BASIN COMPARISON TABLE (5 HYDROBASINS L7 POLYGONS) */}
-        <CalciteTab>
+        <CalciteTab selected={section === 'sub-basins'}>
           <div className="pt-2.5 flex flex-col gap-2.5">
             {zonalStats ? (
               <div className="overflow-x-auto">
@@ -669,7 +713,7 @@ export function CatchmentResponseWorkspace({
         </CalciteTab>
 
         {/* TAB 4: TERRAIN ROUTING CONTEXT */}
-        <CalciteTab>
+        <CalciteTab selected={section === 'terrain-routing'}>
           <div className="pt-2.5 flex flex-col gap-2.5">
             <CalciteNotice open kind="info" scale="s" icon="information">
               <div slot="title">Terrain Context Guards</div>

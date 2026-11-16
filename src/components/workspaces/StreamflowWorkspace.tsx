@@ -548,7 +548,11 @@ export function StreamflowWorkspace({
       ) : selectedReach ? (
         <div className="flex flex-col gap-3">
           {/* Active Reach Summary + Non-Alarmist Signal Banner */}
-          <CalciteCard scale="s">
+          <CalciteCard
+            scale="s"
+            data-demo-target="river-forecast-chart"
+            data-voice-hint="The hydrograph shows modelled GEOGLOWS forecast and ensemble products when available. They are not gauge observations; use the visible service status if a product has failed to load."
+          >
             <span slot="heading">{selectedReach.displayName}</span>
             <span slot="description" style={{ fontFamily: 'var(--calcite-code-family)' }}>
               LINKNO {selectedReach.linkno} · VPU {selectedReach.vpu ?? 103} · Order {selectedReach.streamOrder} · {damPosLabel(selectedReach.damPosition)}

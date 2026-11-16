@@ -1,6 +1,8 @@
 import {
+  useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type MouseEvent as ReactMouseEvent,
   type PointerEvent,
@@ -60,6 +62,9 @@ interface River3DExplorerWorkspaceProps {
   geoglowsForecastTimeMs: number | null;
   onChangeGeoglowsTimeMs: (timeMs: number) => void;
   onNavigateWorkspace: (workspace: AppModuleId) => void;
+  demoFollowNonce: number;
+  demoRunning: boolean;
+  demoPaused: boolean;
 }
 
 function formatDistance(meters: number): string {
@@ -104,6 +109,9 @@ export function River3DExplorerWorkspace({
   geoglowsForecastTimeMs,
   onChangeGeoglowsTimeMs,
   onNavigateWorkspace,
+  demoFollowNonce,
+  demoRunning,
+  demoPaused,
 }: River3DExplorerWorkspaceProps) {
   const [startLinkno, setStartLinkno] = useState<number | null>(null);
   const [sampleIndex, setSampleIndex] = useState(0);
@@ -122,6 +130,7 @@ export function River3DExplorerWorkspace({
   const [historicalError, setHistoricalError] = useState<string | null>(null);
   const [issueDate, setIssueDate] = useState('');
   const [forecastIndex, setForecastIndex] = useState(0);
+  const lastDemoFollowNonce = useRef(0);
 
   const studyAreaReaches = useMemo(() => {
     if (!geoglowsIndex || subBasins.length === 0) return [];
@@ -310,16 +319,52 @@ export function River3DExplorerWorkspace({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPlaying, journeySamples.length, sampleIndex, speed]);
 
-  const moveToSample = (index: number) => {
-    const sample = journeySamples[index];
-    if (!sample) return;
-    onMapModeChange('3d');
-    onJourneyTargetChange(
-      cameraTargetForJourneySample(sample, Math.round(1200 / speed), Date.now())
-    );
-    onProfileMarkerChange({ longitude: sample.longitude, latitude: sample.latitude });
-    setSampleIndex(index);
-  };
+  const moveToSample = useCallback(
+    (index: number) => {
+      const sample = journeySamples[index];
+      if (!sample) return;
+      onMapModeChange('3d');
+      onJourneyTargetChange(
+        cameraTargetForJourneySample(sample, Math.round(1200 / speed), Date.now())
+      );
+      onProfileMarkerChange({ longitude: sample.longitude, latitude: sample.latitude });
+      setSampleIndex(index);
+    },
+    [journeySamples, onJourneyTargetChange, onMapModeChange, onProfileMarkerChange, speed]
+  );
+
+  useEffect(() => {
+    if (!demoRunning || demoPaused) {
+      setIsPlaying(false);
+      return;
+    }
+
+    if (demoFollowNonce > lastDemoFollowNonce.current) {
+      if (downstreamJourney?.downstreamDirectionVerified && journeySamples.length > 1) {
+        lastDemoFollowNonce.current = demoFollowNonce;
+        moveToSample(0);
+        setIsPlaying(true);
+      } else if (!geoglowsIndexLoading && !subBasinsLoading && startCandidates.length === 0) {
+        lastDemoFollowNonce.current = demoFollowNonce;
+        setIsPlaying(false);
+      }
+      return;
+    }
+
+    if (downstreamJourney?.downstreamDirectionVerified && journeySamples.length > 1) {
+      setIsPlaying(true);
+    }
+  }, [
+    demoFollowNonce,
+    demoPaused,
+    demoRunning,
+    downstreamJourney,
+    geoglowsIndexLoading,
+    journeySamples,
+    moveToSample,
+    startCandidates.length,
+    subBasinsLoading,
+  ]);
 
   const handleProfilePointer = (
     event: PointerEvent<SVGSVGElement> | ReactMouseEvent<SVGSVGElement>,
@@ -468,7 +513,7 @@ export function River3DExplorerWorkspace({
         </CalciteNotice>
       )}
 
-      <CalciteCard>
+      <CalciteCard data-demo-target="terrain-profile">
         <div slot="heading">3D downstream journey</div>
         <div slot="description">
           A downstream link requires one unique GEOGLOWS geometry endpoint within 150 m and a

@@ -59,6 +59,7 @@ interface BasinSituationWorkspaceProps {
   onNavigateWorkspace: (id: AppModuleId) => void;
   onOpenSupportingTool: (tool: SupportingToolId) => void;
   onOpenIndicatorInfo: (indicatorId: string) => void;
+  onStartGuidedDemo: () => void;
 }
 
 const INVESTIGATION_STEPS: Array<{
@@ -138,6 +139,7 @@ export function BasinSituationWorkspace({
   onNavigateWorkspace,
   onOpenSupportingTool,
   onOpenIndicatorInfo,
+  onStartGuidedDemo,
 }: BasinSituationWorkspaceProps) {
   const [reportOpen, setReportOpen] = useState(false);
 
@@ -291,9 +293,19 @@ export function BasinSituationWorkspace({
         </div>
 
         <CalciteButton
-          slot="footer-start"
+          className="mb-2"
           scale="s"
           kind="brand"
+          iconStart="play"
+          data-demo-target="workspace-navigation"
+          onClick={onStartGuidedDemo}
+        >
+          Start Guided Demo
+        </CalciteButton>
+        <CalciteButton
+          slot="footer-start"
+          scale="s"
+          appearance="outline"
           iconStart="file-text"
           onClick={() => setReportOpen(true)}
         >
@@ -483,7 +495,7 @@ export function BasinSituationWorkspace({
       <CalciteCard scale="s">
         <span slot="heading">4. River Signal (GEOGLOWS ECMWF v2)</span>
         <span slot="description">
-          {selectedReach ? `${selectedReach.displayName} (LINKNO ${selectedReach.linkno})` : 'Loading verified reach...'}
+          {selectedReach ? 'Selected Upper Tana river reach' : 'Loading verified reach...'}
         </span>
         {streamflowAnalysis ? (
           <div className="flex flex-col gap-2 text-xs">
@@ -508,8 +520,7 @@ export function BasinSituationWorkspace({
           </div>
         ) : (
           <div className="text-xs" style={{ color: 'var(--calcite-color-text-3)' }}>
-            Open Streamflow Intelligence to run ensemble &amp; historical distribution ranking for LINKNO{' '}
-            {selectedLinkno ?? '—'}.
+            Open Streamflow Intelligence to inspect forecast ensembles and historical flow context for the selected reach.
           </div>
         )}
         <CalciteButton

@@ -24,6 +24,7 @@ import type {
   GeoglowsReachIndexResponse,
   GeoglowsReachRecord,
   IdentifyResult,
+  MapPanelTab,
   RasterRenderResult,
   RiverJourneyCameraTarget,
   RiverProfileMarker,
@@ -54,7 +55,7 @@ export function useFlowWatchState() {
   const [mapLayersEnabled, setMapLayersEnabledState] = useState<boolean>(true);
   const [leftPanelOpen, setLeftPanelOpen] = useState<boolean>(false);
   const [rightPanelOpen, setRightPanelOpen] = useState<boolean>(false);
-  const [rightTab, setRightTab] = useState<'legend' | 'identify' | 'transparency'>('legend');
+  const [rightTab, setRightTab] = useState<MapPanelTab>('legend');
   const [darkTheme, setDarkTheme] = useState<boolean>(false);
 
   const [metadataById, setMetadataById] = useState<Record<string, DiscoveredServiceMetadata>>({});

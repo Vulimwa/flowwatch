@@ -2,7 +2,7 @@ import express from 'express';
 import fs from 'fs';
 import path from 'path';
 import zlib from 'zlib';
-import { fileURLToPath } from 'url';
+import type { Express } from 'express';
 import { fromUrl, type GeoTIFF, type GeoTIFFImage } from 'geotiff';
 import {
   getGeoglowsDates,
@@ -30,8 +30,7 @@ import {
   TANA_STREAMS_SERVICE_URL,
 } from './src/config/dataRegistry.ts';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const PROJECT_ROOT = process.cwd();
 
 const PORT = Number(process.env.PORT) || 3000;
 const HOST =
@@ -313,18 +312,18 @@ async function selectBestOverview(tiff: GeoTIFF, targetMaxDim: number): Promise<
 // ---------------------------------------------------------------------------
 // Express App Setup
 // ---------------------------------------------------------------------------
-async function startServer() {
+async function createApp(): Promise<Express> {
   const app = express();
   app.use(express.json());
 
   // Serve Calcite and ArcGIS static assets locally
   app.use(
     '/calcite-assets',
-    express.static(path.join(__dirname, 'node_modules/@esri/calcite-components/dist/cdn'))
+    express.static(path.join(PROJECT_ROOT, 'node_modules/@esri/calcite-components/dist/cdn'))
   );
   app.use(
     '/arcgis-assets',
-    express.static(path.join(__dirname, 'node_modules/@arcgis/core/assets'))
+    express.static(path.join(PROJECT_ROOT, 'node_modules/@arcgis/core/assets'))
   );
 
   // 1. Item & GeoTIFF Discovery Endpoint
@@ -1054,7 +1053,19 @@ async function startServer() {
   });
 
   // Vite Dev Middleware or Static Production Build
-  const distDir = path.join(__dirname, 'dist');
+  if (process.env.VERCEL) {
+    app.use(
+      '/api/calcite-assets',
+      express.static(path.join(PROJECT_ROOT, 'node_modules/@esri/calcite-components/dist/cdn'))
+    );
+    app.use(
+      '/api/arcgis-assets',
+      express.static(path.join(PROJECT_ROOT, 'node_modules/@arcgis/core/assets'))
+    );
+    return app;
+  }
+
+  const distDir = path.join(PROJECT_ROOT, 'dist');
   const distIndex = path.join(distDir, 'index.html');
   const isProduction =
     process.env.NODE_ENV === 'production' || Boolean(process.env.K_SERVICE);
@@ -1084,12 +1095,20 @@ async function startServer() {
     }
   }
 
-  app.listen(PORT, HOST, () => {
-    console.log(`FlowWatch Africa server running at http://${HOST}:${PORT}`);
-  });
+  return app;
 }
 
-startServer().catch((err) => {
-  console.error('Fatal server startup error:', err);
-  process.exit(1);
-});
+export const appPromise = createApp();
+
+if (!process.env.VERCEL) {
+  void appPromise
+    .then((app) => {
+      app.listen(PORT, HOST, () => {
+        console.log(`FlowWatch Africa server running at http://${HOST}:${PORT}`);
+      });
+    })
+    .catch((err) => {
+      console.error('Fatal server startup error:', err);
+      process.exit(1);
+    });
+}

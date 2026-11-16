@@ -220,6 +220,8 @@ export function ImpactExposureWorkspace({
             open
             heading="Population (2025) & Built-Up Settlement Screening"
             description={`Approx. ${screening.corridorAreaKm2Approx.toFixed(1)} km² corridor (${screening.bufferMeters.toLocaleString()} m buffer)`}
+            data-demo-target="exposure-layers"
+            data-voice-hint="Population and built-up layers add exposure context to the selected river corridor. This is a screening result, not a validated flood-inundation boundary or damage estimate."
           >
             <div className="flex flex-col gap-2.5">
               <div className="grid grid-cols-2 gap-2 text-xs">

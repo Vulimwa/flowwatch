@@ -26,7 +26,8 @@ export const PORTAL_ITEMS_BASE = 'https://africageoportal.maps.arcgis.com/sharin
 
 export const TANA_AOI_BOUNDS: [number, number, number, number] = [36.55, -1.25, 38.65, 0.45];
 
-const INDEX_DISK_CACHE_PATH = '/tmp/flowwatch-tana-geoglows-index-v1.json';
+const INDEX_DISK_CACHE_PATH = '/tmp/flowwatch-tana-geoglows-index-v2-kenya.json';
+const INDEX_CACHE_KEY = 'tana-geoglows-index-v2-kenya';
 const UTM37S_PROJ = '+proj=utm +zone=37 +south +datum=WGS84 +units=m +no_defs';
 const WGS84_PROJ = 'EPSG:4326';
 
@@ -34,6 +35,31 @@ const TTL_SHORT_MS = 1000 * 60 * 15; // 15 min for live forecasts
 const TTL_LONG_MS = 1000 * 60 * 60 * 6; // 6 hours for static/historical/return periods
 
 const memoryCache = new Map<string, { data: unknown; ts: number; ttl: number }>();
+
+async function fetchWithTransientRetry(
+  url: string,
+  timeoutMs: number,
+  maxRetries = 1
+): Promise<Response> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
+      if (
+        (response.status < 500 && response.status !== 429) ||
+        attempt === maxRetries
+      ) {
+        return response;
+      }
+      lastError = new Error(`GEOGLOWS returned HTTP ${response.status}`);
+    } catch (error) {
+      lastError = error;
+      if (attempt === maxRetries) throw error;
+    }
+    await new Promise<void>((resolve) => setTimeout(resolve, 300 * (attempt + 1)));
+  }
+  throw lastError instanceof Error ? lastError : new Error('GEOGLOWS request failed after retry.');
+}
 
 function getCached<T>(key: string): T | null {
   const entry = memoryCache.get(key);
@@ -62,9 +88,9 @@ export async function getGeoglowsMapServerMeta(): Promise<GeoglowsMapServerMeta>
 
   try {
     const [rootResp, layerResp, legendResp] = await Promise.all([
-      fetch(`${GEOGLOWS_MAPSERVER_URL}?f=json`, { signal: AbortSignal.timeout(12000) }),
-      fetch(`${GEOGLOWS_MAPSERVER_URL}/0?f=json`, { signal: AbortSignal.timeout(12000) }),
-      fetch(`${GEOGLOWS_MAPSERVER_URL}/legend?f=json`, { signal: AbortSignal.timeout(12000) }),
+      fetchWithTransientRetry(`${GEOGLOWS_MAPSERVER_URL}?f=json`, 12000),
+      fetchWithTransientRetry(`${GEOGLOWS_MAPSERVER_URL}/0?f=json`, 12000),
+      fetchWithTransientRetry(`${GEOGLOWS_MAPSERVER_URL}/legend?f=json`, 12000),
     ]);
 
     if (!rootResp.ok || !layerResp.ok) {
@@ -167,9 +193,10 @@ async function fetchAllArcGisFeatures(
       resultOffset: String(offset),
       f: 'json',
     });
-    const resp = await fetch(`${layerUrl}/query?${qs.toString()}`, {
-      signal: AbortSignal.timeout(25000),
-    });
+    const resp = await fetchWithTransientRetry(
+      `${layerUrl}/query?${qs.toString()}`,
+      25000
+    );
     if (!resp.ok) {
       throw new Error(`ArcGIS query failed (${resp.status}) at ${layerUrl}`);
     }
@@ -354,7 +381,7 @@ export async function getTanaGeoglowsReachIndex(
   forceRefresh = false
 ): Promise<GeoglowsReachIndexResponse> {
   if (!forceRefresh) {
-    const mem = getCached<GeoglowsReachIndexResponse>('tana-geoglows-index');
+    const mem = getCached<GeoglowsReachIndexResponse>(INDEX_CACHE_KEY);
     if (mem) return mem;
 
     try {
@@ -365,7 +392,7 @@ export async function getTanaGeoglowsReachIndex(
             fs.readFileSync(INDEX_DISK_CACHE_PATH, 'utf8')
           ) as GeoglowsReachIndexResponse;
           if (parsed?.reaches?.length > 0 && parsed?.tanaMatches?.length > 0) {
-            setCached('tana-geoglows-index', parsed, TTL_LONG_MS);
+            setCached(INDEX_CACHE_KEY, parsed, TTL_LONG_MS);
             return parsed;
           }
         }
@@ -381,6 +408,7 @@ export async function getTanaGeoglowsReachIndex(
     try {
       const [geoglowsFeats, tanaFeats] = await Promise.all([
         fetchAllArcGisFeatures(`${GEOGLOWS_MAPSERVER_URL}/0`, {
+          where: "rivercountry='Kenya'",
           geometry: TANA_AOI_BOUNDS.join(','),
           geometryType: 'esriGeometryEnvelope',
           inSR: '4326',
@@ -583,7 +611,7 @@ export async function getTanaGeoglowsReachIndex(
         tanaMatches,
       };
 
-      setCached('tana-geoglows-index', response, TTL_LONG_MS);
+      setCached(INDEX_CACHE_KEY, response, TTL_LONG_MS);
       try {
         fs.writeFileSync(INDEX_DISK_CACHE_PATH, JSON.stringify(response), 'utf8');
       } catch {
@@ -659,9 +687,10 @@ export async function getGeoglowsDates(): Promise<string[]> {
   const cached = getCached<string[]>('geoglows-dates');
   if (cached) return cached;
 
-  const resp = await fetch(`${GEOGLOWS_API_BASE}/dates?format=json`, {
-    signal: AbortSignal.timeout(12000),
-  });
+  const resp = await fetchWithTransientRetry(
+    `${GEOGLOWS_API_BASE}/dates?format=json`,
+    12000
+  );
   if (!resp.ok) {
     throw new Error(`GEOGLOWS dates endpoint returned HTTP ${resp.status}`);
   }
@@ -711,9 +740,10 @@ export async function getGeoglowsForecast(
   for (const cand of candidateDates) {
     const candQs = cand ? `&date=${cand}` : '';
     try {
-      const resp = await fetch(`${GEOGLOWS_API_BASE}/forecaststats/${linkno}?format=json${candQs}`, {
-        signal: AbortSignal.timeout(18000),
-      });
+      const resp = await fetchWithTransientRetry(
+        `${GEOGLOWS_API_BASE}/forecaststats/${linkno}?format=json${candQs}`,
+        18000
+      );
       if (resp.ok) {
         const parsed = (await resp.json()) as ForecastStatsPayload;
         if (!parsed.error && Array.isArray(parsed.datetime)) {
@@ -734,12 +764,14 @@ export async function getGeoglowsForecast(
 
   const resolvedQs = resolvedDate ? `&date=${resolvedDate}` : '';
   const [summaryResp, recordsResp] = await Promise.allSettled([
-    fetch(`${GEOGLOWS_API_BASE}/forecast/${linkno}?format=json${resolvedQs}`, {
-      signal: AbortSignal.timeout(18000),
-    }),
-    fetch(`${GEOGLOWS_API_BASE}/forecastrecords/${linkno}?format=json`, {
-      signal: AbortSignal.timeout(18000),
-    }),
+    fetchWithTransientRetry(
+      `${GEOGLOWS_API_BASE}/forecast/${linkno}?format=json${resolvedQs}`,
+      18000
+    ),
+    fetchWithTransientRetry(
+      `${GEOGLOWS_API_BASE}/forecastrecords/${linkno}?format=json`,
+      18000
+    ),
   ]);
 
   const datetime = statsJson.datetime || [];
@@ -877,9 +909,10 @@ export async function getGeoglowsEnsembles(
   for (const cand of candidateDates) {
     const dateQs = cand ? `&date=${cand}` : '';
     try {
-      const resp = await fetch(`${GEOGLOWS_API_BASE}/forecastensemble/${linkno}?format=json${dateQs}`, {
-        signal: AbortSignal.timeout(22000),
-      });
+      const resp = await fetchWithTransientRetry(
+        `${GEOGLOWS_API_BASE}/forecastensemble/${linkno}?format=json${dateQs}`,
+        22000
+      );
       if (resp.ok) {
         const parsed = (await resp.json()) as Record<string, unknown>;
         if (!parsed.error) {
@@ -956,7 +989,7 @@ export async function getGeoglowsHistorical(
     coverageNote = 'Day-of-year climatological mean derived from 1940–present simulation.';
   }
 
-  const resp = await fetch(endpoint, { signal: AbortSignal.timeout(28000) });
+  const resp = await fetchWithTransientRetry(endpoint, 28000);
   if (!resp.ok) {
     throw new Error(`GEOGLOWS historical endpoint returned HTTP ${resp.status}`);
   }
@@ -1168,9 +1201,10 @@ async function getRiverIdIndexMap(): Promise<Map<number, number>> {
 async function fetchZarrChunk(pathSuffix: string): Promise<Buffer> {
   const cached = zarrChunkCache.get(pathSuffix);
   if (cached) return cached;
-  const resp = await fetch(`${GEOGLOWS_ZARR_BASE}/${pathSuffix}`, {
-    signal: AbortSignal.timeout(20000),
-  });
+  const resp = await fetchWithTransientRetry(
+    `${GEOGLOWS_ZARR_BASE}/${pathSuffix}`,
+    20000
+  );
   if (!resp.ok) {
     throw new Error(`Zarr chunk ${pathSuffix} returned HTTP ${resp.status}`);
   }
@@ -1190,9 +1224,10 @@ export async function getGeoglowsReturnPeriods(
 
   // 1. Try official REST endpoint first
   try {
-    const apiResp = await fetch(`${GEOGLOWS_API_BASE}/returnperiods/${linkno}?format=json`, {
-      signal: AbortSignal.timeout(8000),
-    });
+    const apiResp = await fetchWithTransientRetry(
+      `${GEOGLOWS_API_BASE}/returnperiods/${linkno}?format=json`,
+      8000
+    );
     if (apiResp.ok) {
       const json = (await apiResp.json()) as Record<string, unknown>;
       if (!json.error && (json['2'] != null || json.return_period_2 != null)) {

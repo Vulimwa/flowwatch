@@ -191,6 +191,7 @@ interface BasinMapViewProps {
   onIdentifyStart: () => void;
   onIdentifyComplete: (result: IdentifyResult) => void;
   onOpenIdentifyTab: () => void;
+  onMapReadyChange?: (ready: boolean) => void;
 }
 
 export function BasinMapView({
@@ -223,6 +224,7 @@ export function BasinMapView({
   onIdentifyStart,
   onIdentifyComplete,
   onOpenIdentifyTab,
+  onMapReadyChange,
 }: BasinMapViewProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const viewRef = useRef<MapView | SceneView | null>(null);
@@ -278,6 +280,10 @@ export function BasinMapView({
   const [searchOpen, setSearchOpen] = useState(false);
   const searchHostRef = useRef<HTMLDivElement | null>(null);
   const searchWidgetRef = useRef<Search | null>(null);
+
+  useEffect(() => {
+    onMapReadyChange?.(mapReady);
+  }, [mapReady, onMapReadyChange]);
 
   // Initialize ArcGIS Map + MapView (2D) or SceneView (Real 3D Terrain)
   useEffect(() => {
@@ -1472,6 +1478,8 @@ export function BasinMapView({
         <CalciteSegmentedControl
           scale="s"
           layout="horizontal"
+          data-demo-target="view-switch"
+          data-voice-hint="Switch between the existing two-dimensional MapView and three-dimensional SceneView. The 3D terrain display does not change the underlying elevation values."
           onCalciteSegmentedControlChange={(e) => {
             const next = (e.target as HTMLCalciteSegmentedControlElement).value as '2d' | '3d';
             if (next === '2d' || next === '3d') onViewModeChange(next);
@@ -1498,6 +1506,7 @@ export function BasinMapView({
             scale="s"
             checked={mapLayersEnabled}
             label="Map layers"
+            data-voice-hint="Turn map overlays on or off. Analysis and data requests may continue independently of whether a layer is drawn."
             onCalciteSwitchChange={(e) => {
               onMapLayersEnabledChange(Boolean((e.target as HTMLCalciteSwitchElement).checked));
             }}
@@ -1511,6 +1520,7 @@ export function BasinMapView({
           appearance="solid"
           iconStart="home"
           label={viewMode === '3d' ? 'Reset 3D Oblique Basin Camera' : 'Zoom to Tana Basin AOI'}
+          data-voice-hint="Return the map to the Upper Tana basin extent."
           onClick={onResetHome}
         >
           Basin Extent

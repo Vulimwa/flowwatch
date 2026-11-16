@@ -7,6 +7,7 @@ export type AppModuleId =
   | 'river_3d_explorer';
 
 export type SupportingToolId = 'layers' | 'registry' | 'indicators';
+export type MapPanelTab = 'legend' | 'identify' | 'transparency' | 'guide';
 
 export type DatasetCategory =
   | 'Rainfall and Climate'

@@ -39,6 +39,7 @@ interface WaterOperationsWorkspaceProps {
   selectedLinkno?: number | null;
   onScenarioResultChange?: (res: DamScenarioResult) => void;
   onOpenIndicatorInfo?: (indicatorId: string) => void;
+  demoPresetRequest?: { id: string; nonce: number } | null;
 }
 
 function positionLabel(pos: GeoglowsReachRecord['damPosition']): string {
@@ -59,6 +60,7 @@ export function WaterOperationsWorkspace({
   selectedLinkno,
   onScenarioResultChange,
   onOpenIndicatorInfo,
+  demoPresetRequest,
 }: WaterOperationsWorkspaceProps) {
   const [scenarioA, setScenarioA] = useState<DamScenarioParams>(
     ILLUSTRATIVE_DAM_PRESETS[0].params
@@ -149,6 +151,12 @@ export function WaterOperationsWorkspace({
     const found = ILLUSTRATIVE_DAM_PRESETS.find((p) => p.id === presetId);
     if (found) setScenarioA({ ...found.params });
   };
+
+  useEffect(() => {
+    if (!demoPresetRequest) return;
+    const found = ILLUSTRATIVE_DAM_PRESETS.find((preset) => preset.id === demoPresetRequest.id);
+    if (found) setScenarioA({ ...found.params });
+  }, [demoPresetRequest]);
 
   const handleReset = () => {
     setScenarioA({ ...ILLUSTRATIVE_DAM_PRESETS[0].params });
@@ -296,7 +304,12 @@ export function WaterOperationsWorkspace({
       </CalciteBlock>
 
       {/* Hypothetical Controls */}
-      <CalciteBlock open heading="Scenario A Controls (Hypothetical Inputs)">
+      <CalciteBlock
+        open
+        heading="Scenario A Controls (Hypothetical Inputs)"
+        data-demo-target="dam-controls"
+        data-voice-hint="These scenario inputs are hypothetical and are not connected to KenGen SCADA. A selected river reach discharge is not a measured reservoir inflow."
+      >
         <div className="flex flex-col gap-3">
           <div className="flex items-end gap-2">
             <CalciteLabel scale="s" className="flex-1 mb-0">
