@@ -16,7 +16,7 @@
     }
   ],
   "functions": {
-    "api/[...path].ts": {
+    "api/**/*.ts": {
       "includeFiles": "node_modules/{@esri/calcite-components/dist/cdn,@arcgis/core/assets}/**"
     }
   }
